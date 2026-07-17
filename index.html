@@ -23,7 +23,7 @@
       font-family: system-ui, sans-serif;
     }
     body > * { direction: ltr; }
-    main { text-align: right; font-family: ui-monospace, monospace; }
+    main { text-align: right; font-family: ui-monospace, monospace; min-width: 0; }
     img {
       /* out of the grid: pinned to the corner, bleeding off the top-left edge */
       position: fixed; top: -200px; left: -200px; z-index: -1;
@@ -35,7 +35,8 @@
     @keyframes spin { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
     h1 {
       letter-spacing: 0.3em; text-transform: uppercase; margin: 0 0 0.5rem;
-      font-size: 4rem; color: #564b9c;
+      /* 8.5vw only bites below ~750px viewport; desktop stays at 4rem */
+      font-size: clamp(1.6rem, 8.5vw, 4rem); color: #564b9c;
       -webkit-text-stroke: 6px #a2d741;
       paint-order: stroke fill; /* stroke behind fill = outline sits outside the letters */
     }
@@ -95,10 +96,18 @@
       position: absolute; top: 10px; right: 12px; z-index: 4;
       font-family: monospace; font-size: 12px; color: #fff;
       text-decoration: none;
+      max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     #song:hover { text-decoration: underline; }
     #msg { top: 30px; left: 50%; transform: translateX(-50%); text-transform: uppercase; }
     #msg:empty { display: none; }
+
+    /* phones: tighter padding, smaller logo bleed, prompt below the HUD row */
+    @media (max-width: 700px) {
+      body { padding: 24px 24px 280px; gap: 24px; grid-template-columns: 1fr; }
+      img { top: -80px; left: -80px; width: min(75vw, 682px); }
+      #msg { top: 90px; }
+    }
   </style>
 </head>
 <body>
@@ -134,7 +143,7 @@
   <script>
     // Shark runner. Coordinate system: y = shark's offset from the waterline
     // (px, positive = airborne, negative = submerged). Waterline = top of #water.
-    const WATER = 90, SHARK_X = 200, DIVE_Y = -48;
+    const WATER = 90, SHARK_X = Math.min(200, innerWidth * 0.25), DIVE_Y = -48;
     const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
           scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg'),
           bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute');
