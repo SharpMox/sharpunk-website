@@ -107,6 +107,8 @@
       body { padding: 24px 24px 280px; gap: 24px; grid-template-columns: 1fr; }
       main { margin-top: 48px; }
       img { top: -80px; left: -80px; width: min(75vw, 682px); }
+      /* shrink the whole strip 20% for visibility; 125vw x 0.8 = full width */
+      #game { width: 125vw; right: auto; transform: scale(0.8); transform-origin: bottom left; }
     }
   </style>
 </head>
@@ -143,11 +145,15 @@
   <script>
     // Shark runner. Coordinate system: y = shark's offset from the waterline
     // (px, positive = airborne, negative = submerged). Waterline = top of #water.
-    // narrow screens: hug the left edge for maximum reaction time
-    const WATER = 90, SHARK_X = innerWidth < 500 ? 16 : Math.min(200, innerWidth * 0.25), DIVE_Y = -48;
+    const WATER = 90, DIVE_Y = -48;
     const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
           scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg'),
           bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute');
+    const W = () => game.clientWidth; // strip's coordinate width (125vw when scaled on phones)
+    // narrow screens: hug the left edge for maximum reaction time
+    const sharkX = () => W() < 625 ? 20 : Math.min(200, W() * 0.25);
+    let SHARK_X = sharkX();
+    addEventListener('resize', () => SHARK_X = sharkX());
 
     muteEl.addEventListener('click', () => {
       bgm.muted = !bgm.muted;
@@ -206,7 +212,7 @@
       game.appendChild(el);
       // sailboat floats with its hull right on the waterline (dive under it);
       // rock pile is mostly submerged, tip above the surface (jump over it)
-      obstacles.push({ el, x: innerWidth + 40, cy: boat ? 12 : -70, boat });
+      obstacles.push({ el, x: W() + 40, cy: boat ? 12 : -70, boat });
     }
 
     // parallax decor: seeded once, recycled by wrapping — no spawn/despawn.
@@ -225,7 +231,7 @@
         game.appendChild(el);
         // clouds, birds and fish keep drifting while the game is paused; islands and coral don't
         const ambient = ['☁️', '🕊️', '🐟', '🐠', '🐡'].includes(emoji);
-        decor.push({ el, x: Math.random() * innerWidth, mult, ambient });
+        decor.push({ el, x: Math.random() * W(), mult, ambient });
       }
     }
     seedDecor([ // sky + horizon, behind the water
@@ -258,7 +264,7 @@
         else y += ((diving ? DIVE_Y : 0) - y) * 0.3;
 
         const last = obstacles[obstacles.length - 1];
-        if (!last || last.x < innerWidth - (300 + Math.random() * 400 + speed * 40)) spawn();
+        if (!last || last.x < W() - (300 + Math.random() * 400 + speed * 40)) spawn();
 
         for (const o of obstacles) {
           o.x -= speed;
@@ -272,14 +278,14 @@
 
         for (const d of decor) {
           d.x -= speed * d.mult;
-          if (d.x < -100) d.x = innerWidth + 100;
+          if (d.x < -100) d.x = W() + 100;
           d.el.style.left = d.x + 'px';
         }
       } else {
         for (const d of decor) {
           if (!d.ambient) continue;
           d.x -= 0.4 * d.mult; // slowest drift while paused
-          if (d.x < -100) d.x = innerWidth + 100;
+          if (d.x < -100) d.x = W() + 100;
           d.el.style.left = d.x + 'px';
         }
         if (state === 'idle') y = Math.sin(t / 20) * 4; // idle bob
