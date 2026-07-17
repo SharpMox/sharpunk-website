@@ -8,24 +8,31 @@
     body {
       margin: 0;
       min-height: 100vh;
+      box-sizing: border-box;
       display: grid;
-      place-items: center;
+      /* ponytail: rtl grid = first source item (text) fills the right column
+         when wide, top row when wrapped — no media query needed */
+      direction: rtl;
+      grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
+      align-items: start;
+      gap: 50px;
+      padding: 50px;
       background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
       color: #f2f2f2;
       font-family: system-ui, sans-serif;
-      text-align: center;
     }
-    img { width: min(90vw, 620px); position: fixed; top: 50px; left: 50px; }
-    main { position: fixed; top: 50px; right: 50px; text-align: right; }
+    body > * { direction: ltr; }
+    main { text-align: right; }
+    img { width: min(100%, 620px); justify-self: left; }
     h1 { letter-spacing: 0.3em; text-transform: uppercase; margin: 0 0 0.5rem; }
     p { color: #a8f5c0; margin: 0; }
   </style>
 </head>
 <body>
   <main>
-    <img src="logo.svg" alt="Sharpunk logo">
     <h1>Sharpunk</h1>
     <p>Coming soon.</p>
   </main>
+  <img src="logo.svg" alt="Sharpunk logo">
 </body>
 </html>
