@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sharpunk</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <style>
     body {
       margin: 0;
@@ -122,7 +123,7 @@
     // bg (islands/clouds/doves) drifts at 0.3x game speed behind the water;
     // fg (coral/fish) at 1.5x in front of the game sprites.
     const decor = [];
-    function seedDecor(defs, mult, z) {
+    function seedDecor(defs, mult, z, opacity) {
       for (const [emoji, size, bottom] of defs) {
         const el = document.createElement('span');
         el.className = 'decor';
@@ -130,6 +131,7 @@
         el.style.fontSize = size + 'px';
         el.style.bottom = bottom + 'px';
         el.style.zIndex = z;
+        if (opacity) el.style.opacity = opacity;
         game.appendChild(el);
         decor.push({ el, x: Math.random() * innerWidth, mult });
       }
@@ -138,7 +140,7 @@
       ['🏝️', 60, WATER - 10], ['🏝️', 44, WATER - 6],
       ['☁️', 48, 190], ['☁️', 36, 210], ['☁️', 42, 170],
       ['🕊️', 24, 185], ['🕊️', 20, 205],
-    ], 0.3, 0);
+    ], 0.3, 0, 0.85);
     seedDecor([ // seabed + swimmers, in front of everything
       ['🪸', 48, -14], ['🪸', 38, -10], ['🪸', 44, -16], ['🪸', 36, -8],
       ['🐟', 24, 30], ['🐠', 26, 12], ['🐡', 22, 44], ['🐟', 20, 20],
