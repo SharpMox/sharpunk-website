@@ -99,11 +99,12 @@
       const boat = Math.random() < 0.5;
       const el = document.createElement('span');
       el.className = 'sprite';
-      el.textContent = boat ? '⛵' : '🪝';
-      if (boat) el.style.fontSize = '100px';
+      el.textContent = boat ? '⛵' : '🪨';
+      el.style.fontSize = boat ? '100px' : '110px';
       game.appendChild(el);
-      // sailboat rides the surface (dive under it); hook dangles into the water (jump over)
-      obstacles.push({ el, x: innerWidth + 40, cy: boat ? -10 : -14, boat });
+      // sailboat hull sits in the water (dive under it); rock is mostly submerged,
+      // tip poking above the surface (jump over it)
+      obstacles.push({ el, x: innerWidth + 40, cy: boat ? -24 : -70, boat });
     }
 
     function die() {
@@ -128,10 +129,10 @@
         for (const o of obstacles) {
           o.x -= speed;
           place(o.el, o.x, o.cy);
-          // sail reaches all the way up (jumping always clips it); hook reaches all
-          // the way down (diving always snags it) — each has exactly one escape
-          const d = o.x - SHARK_X; // boat sprite is 100px wide, hook 40px
-          if ((o.boat ? d > -90 && d < 35 : Math.abs(d) < 30) && (o.boat ? y > -30 : y < 26)) die();
+          // sail reaches all the way up (jumping always clips it); rock reaches all
+          // the way down (diving always hits it) — each has exactly one escape
+          const d = o.x - SHARK_X; // both sprites ~100-110px wide
+          if (o.boat ? (d > -90 && d < 35 && y > -30) : (d > -95 && d < 32 && y < 38)) die();
         }
         obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
       } else if (state === 'idle') {
