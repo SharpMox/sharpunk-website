@@ -16,7 +16,7 @@
       grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
       align-items: start;
       gap: 50px;
-      padding: 50px;
+      padding: 50px 50px 230px; /* room for the fixed game strip */
       background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
       color: #f2f2f2;
       font-family: system-ui, sans-serif;
@@ -26,6 +26,27 @@
     img { width: min(100%, 620px); justify-self: left; }
     h1 { letter-spacing: 0.3em; text-transform: uppercase; margin: 0 0 0.5rem; }
     p { color: #a8f5c0; margin: 0; }
+
+    /* shark game strip */
+    #game {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 180px;
+      overflow: hidden; touch-action: none; user-select: none;
+    }
+    #water {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 90px;
+      background: rgba(61, 140, 220, 0.35);
+      border-top: 2px solid rgba(160, 215, 255, 0.6);
+    }
+    #game .sprite { position: absolute; font-size: 40px; line-height: 1; }
+    #shark { left: 40px; transform: scaleX(-1); } /* emoji faces left; flip to swim right */
+    #score {
+      position: absolute; top: 8px; right: 12px;
+      font-family: monospace; font-size: 14px; color: #a8f5c0;
+    }
+    #msg {
+      position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+      font-family: monospace; font-size: 14px; color: #f2f2f2; white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -34,5 +55,107 @@
     <p>Coming soon.</p>
   </main>
   <img src="logo.svg" alt="Sharpunk logo">
+
+  <div id="game">
+    <div id="water"></div>
+    <span id="shark" class="sprite">🦈</span>
+    <span id="score"></span>
+    <span id="msg">↑ / tap to play</span>
+  </div>
+
+  <script>
+    // Shark runner. Coordinate system: y = shark's offset from the waterline
+    // (px, positive = airborne, negative = submerged). Waterline = top of #water.
+    const WATER = 90, SHARK_X = 40, DIVE_Y = -48;
+    const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
+          scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg');
+
+    let state = 'idle', y = 0, vy = 0, diving = false;
+    let score = 0, hi = +localStorage.sharkHi || 0, t = 0, obstacles = [];
+
+    // ponytail: frame-based physics like the original T-rex — no dt scaling,
+    // assumes ~60fps; switch to dt if high-refresh screens feel too fast
+    const GRAV = 0.5, JUMP_V = 10, BASE_SPEED = 5;
+
+    function place(el, x, cy) { // cy = sprite center relative to waterline
+      el.style.left = x + 'px';
+      el.style.bottom = (WATER + cy - 20) + 'px';
+    }
+
+    function jump() {
+      if (state !== 'run') return start();
+      if (y <= 0 && !diving) vy = JUMP_V;
+    }
+
+    function start() {
+      if (state === 'dead' || state === 'idle') {
+        obstacles.forEach(o => o.el.remove());
+        obstacles = []; score = 0; y = 0; vy = 0; state = 'run';
+        msgEl.textContent = ''; sharkEl.textContent = '🦈';
+      }
+    }
+
+    function spawn() {
+      const boat = Math.random() < 0.5;
+      const el = document.createElement('span');
+      el.className = 'sprite';
+      el.textContent = boat ? '🚤' : '🪝';
+      game.appendChild(el);
+      // boat rides on the surface (dive under it); hook tip dangles just below it (jump over)
+      obstacles.push({ el, x: innerWidth + 40, cy: boat ? 14 : -10, boat });
+    }
+
+    function die() {
+      state = 'dead';
+      hi = Math.max(hi, score); localStorage.sharkHi = hi;
+      sharkEl.textContent = '💀';
+      msgEl.textContent = 'GAME OVER — ↑ to restart';
+    }
+
+    function tick() {
+      t++;
+      if (state === 'run') {
+        score += 0.15;
+        const speed = BASE_SPEED + score * 0.002;
+
+        if (y > 0 || vy > 0) { y += vy; vy -= GRAV; if (y < 0 && !diving) { y = 0; vy = 0; } }
+        else y += ((diving ? DIVE_Y : 0) - y) * 0.3;
+
+        const last = obstacles[obstacles.length - 1];
+        if (!last || last.x < innerWidth - (300 + Math.random() * 400 + speed * 40)) spawn();
+
+        for (const o of obstacles) {
+          o.x -= speed;
+          place(o.el, o.x, o.cy);
+          if (Math.abs(o.x - SHARK_X) < 30 && Math.abs(o.cy - y) < 26) die();
+        }
+        obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
+      } else if (state === 'idle') {
+        y = Math.sin(t / 20) * 4; // idle bob
+      }
+      place(sharkEl, SHARK_X, y);
+      scoreEl.textContent = 'HI ' + String(hi | 0).padStart(5, '0') + '  ' + String(score | 0).padStart(5, '0');
+      requestAnimationFrame(tick);
+    }
+
+    addEventListener('keydown', e => {
+      if (e.code === 'ArrowUp' || e.code === 'Space') { e.preventDefault(); jump(); }
+      if (e.code === 'ArrowDown') { e.preventDefault(); diving = true; if (state !== 'run') start(); }
+    });
+    addEventListener('keyup', e => { if (e.code === 'ArrowDown') diving = false; });
+
+    // touch: tap = jump, hold = dive
+    let holdTimer;
+    game.addEventListener('touchstart', e => {
+      e.preventDefault();
+      holdTimer = setTimeout(() => { holdTimer = null; diving = true; if (state !== 'run') start(); }, 180);
+    });
+    game.addEventListener('touchend', () => {
+      if (holdTimer) { clearTimeout(holdTimer); jump(); }
+      diving = false;
+    });
+
+    tick();
+  </script>
 </body>
 </html>
