@@ -99,12 +99,21 @@
       const boat = Math.random() < 0.5;
       const el = document.createElement('span');
       el.className = 'sprite';
-      el.textContent = boat ? '⛵' : '🪨';
-      el.style.fontSize = boat ? '100px' : '110px';
+      if (boat) {
+        el.textContent = '⛵';
+        el.style.fontSize = '100px';
+      } else {
+        // main rock breaking the surface + smaller rocks piled beneath it,
+        // overflowing past the bottom of the strip
+        el.innerHTML =
+          '<span style="position:absolute;bottom:0;left:0;font-size:110px">🪨</span>' +
+          '<span style="position:absolute;bottom:-55px;left:-25px;font-size:80px">🪨</span>' +
+          '<span style="position:absolute;bottom:-70px;left:45px;font-size:90px">🪨</span>';
+      }
       game.appendChild(el);
-      // sailboat hull sits in the water (dive under it); rock is mostly submerged,
-      // tip poking above the surface (jump over it)
-      obstacles.push({ el, x: innerWidth + 40, cy: boat ? -24 : -70, boat });
+      // sailboat floats with its hull right on the waterline (dive under it);
+      // rock pile is mostly submerged, tip above the surface (jump over it)
+      obstacles.push({ el, x: innerWidth + 40, cy: boat ? 12 : -70, boat });
     }
 
     function die() {
