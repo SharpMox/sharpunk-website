@@ -36,16 +36,18 @@
       position: absolute; bottom: 0; left: 0; right: 0; height: 90px;
       background: rgba(61, 140, 220, 0.35);
       border-top: 2px solid rgba(160, 215, 255, 0.6);
+      z-index: 1;
     }
-    #game .sprite { position: absolute; font-size: 40px; line-height: 1; }
+    #game .sprite { position: absolute; font-size: 40px; line-height: 1; z-index: 2; }
+    #game .decor { position: absolute; line-height: 1; pointer-events: none; }
     #shark { transform: scaleX(-1); } /* emoji faces left; flip to swim right */
     #score {
       position: absolute; top: 8px; right: 12px;
-      font-family: monospace; font-size: 14px; color: #a8f5c0;
+      font-family: monospace; font-size: 14px; color: #a8f5c0; z-index: 4;
     }
     #msg {
       position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
-      font-family: monospace; font-size: 14px; color: #f2f2f2; white-space: nowrap;
+      font-family: monospace; font-size: 14px; color: #f2f2f2; white-space: nowrap; z-index: 4;
     }
   </style>
 </head>
@@ -116,6 +118,33 @@
       obstacles.push({ el, x: innerWidth + 40, cy: boat ? 12 : -70, boat });
     }
 
+    // parallax decor: seeded once, recycled by wrapping — no spawn/despawn.
+    // bg (islands/clouds/doves) drifts at 0.3x game speed behind the water;
+    // fg (coral/fish) at 1.5x in front of the game sprites.
+    const decor = [];
+    function seedDecor(defs, mult, z) {
+      for (const [emoji, size, bottom] of defs) {
+        const el = document.createElement('span');
+        el.className = 'decor';
+        el.textContent = emoji;
+        el.style.fontSize = size + 'px';
+        el.style.bottom = bottom + 'px';
+        el.style.zIndex = z;
+        game.appendChild(el);
+        decor.push({ el, x: Math.random() * innerWidth, mult });
+      }
+    }
+    seedDecor([ // sky + horizon, behind the water
+      ['🏝️', 60, WATER - 10], ['🏝️', 44, WATER - 6],
+      ['☁️', 48, 190], ['☁️', 36, 210], ['☁️', 42, 170],
+      ['🕊️', 24, 185], ['🕊️', 20, 205],
+    ], 0.3, 0);
+    seedDecor([ // seabed + swimmers, in front of everything
+      ['🪸', 48, -14], ['🪸', 38, -10], ['🪸', 44, -16], ['🪸', 36, -8],
+      ['🐟', 24, 30], ['🐠', 26, 12], ['🐡', 22, 44], ['🐟', 20, 20],
+    ], 1.5, 3);
+    decor.forEach(d => { d.el.style.left = d.x + 'px'; });
+
     function die() {
       state = 'dead';
       hi = Math.max(hi, score); localStorage.sharkHi = hi;
@@ -144,6 +173,12 @@
           if (o.boat ? (d > -85 && d < 30 && y > -26) : (d > -85 && d < 28 && y < 34)) die();
         }
         obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
+
+        for (const d of decor) {
+          d.x -= speed * d.mult;
+          if (d.x < -100) d.x = innerWidth + 100;
+          d.el.style.left = d.x + 'px';
+        }
       } else if (state === 'idle') {
         y = Math.sin(t / 20) * 4; // idle bob
       }
