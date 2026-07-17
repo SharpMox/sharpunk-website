@@ -158,7 +158,7 @@
       t++;
       if (state === 'run') {
         score += 0.15;
-        const speed = BASE_SPEED + score * 0.002;
+        const speed = BASE_SPEED + score * 0.004;
 
         if (y > 0 || vy > 0) { y += vy; vy -= GRAV; if (y < 0 && !diving) { y = 0; vy = 0; } }
         else y += ((diving ? DIVE_Y : 0) - y) * 0.3;
