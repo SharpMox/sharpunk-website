@@ -24,7 +24,12 @@
     }
     body > * { direction: ltr; }
     main { text-align: right; font-family: ui-monospace, monospace; }
-    img { width: min(100%, 620px); justify-self: left; }
+    img {
+      width: min(100%, 620px); justify-self: left;
+      /* shrink instead of sliding under the game strip on short windows */
+      max-height: max(120px, calc(100vh - 350px));
+      object-fit: contain; object-position: left top;
+    }
     h1 { letter-spacing: 0.3em; text-transform: uppercase; margin: 0 0 0.5rem; }
     p { color: #a8f5c0; margin: 0; }
 
