@@ -259,7 +259,8 @@
       if (state === 'run') {
         score += 0.15;
         // matches Chrome T-rex: start 6, accelerate ~0.001/frame, cap at 13
-        const speed = Math.min(13, BASE_SPEED + score * 0.007);
+        // ponytail: narrow screen = mobile; 25% slower there for thumb reaction time
+        const speed = Math.min(13, BASE_SPEED + score * 0.007) * (W() < 625 ? 0.75 : 1);
 
         if (y > 0 || vy > 0) { y += vy; vy -= GRAV; if (y < 0 && !diving) { y = 0; vy = 0; } }
         else y += ((diving ? DIVE_Y : 0) - y) * 0.3;
@@ -309,7 +310,7 @@
     document.addEventListener('touchstart', e => {
       if (isControl(e)) return;
       e.preventDefault();
-      holdTimer = setTimeout(() => { holdTimer = null; diving = true; if (state !== 'run') start(); }, 180);
+      holdTimer = setTimeout(() => { holdTimer = null; diving = true; if (state !== 'run') start(); }, 120);
     }, { passive: false });
     document.addEventListener('touchend', e => {
       if (isControl(e)) return;
