@@ -75,7 +75,7 @@
 
     // ponytail: frame-based physics like the original T-rex — no dt scaling,
     // assumes ~60fps; switch to dt if high-refresh screens feel too fast
-    const GRAV = 0.5, JUMP_V = 10, BASE_SPEED = 5;
+    const GRAV = 0.5, JUMP_V = 11, BASE_SPEED = 5;
 
     function place(el, x, cy) { // cy = sprite center relative to waterline
       el.style.left = x + 'px';
@@ -107,8 +107,8 @@
         // overflowing past the bottom of the strip
         el.innerHTML =
           '<span style="position:absolute;bottom:0;left:0;font-size:110px">🪨</span>' +
-          '<span style="position:absolute;bottom:-55px;left:-25px;font-size:80px">🪨</span>' +
-          '<span style="position:absolute;bottom:-70px;left:45px;font-size:90px">🪨</span>';
+          '<span style="position:absolute;bottom:-35px;left:-30px;font-size:80px">🪨</span>' +
+          '<span style="position:absolute;bottom:-50px;left:40px;font-size:90px">🪨</span>';
       }
       game.appendChild(el);
       // sailboat floats with its hull right on the waterline (dive under it);
@@ -140,8 +140,8 @@
           place(o.el, o.x, o.cy);
           // sail reaches all the way up (jumping always clips it); rock reaches all
           // the way down (diving always hits it) — each has exactly one escape
-          const d = o.x - SHARK_X; // both sprites ~100-110px wide
-          if (o.boat ? (d > -90 && d < 35 && y > -30) : (d > -95 && d < 32 && y < 38)) die();
+          const d = o.x - SHARK_X; // hitboxes trimmed to the visible glyph, not the em box
+          if (o.boat ? (d > -85 && d < 30 && y > -26) : (d > -85 && d < 28 && y < 34)) die();
         }
         obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
       } else if (state === 'idle') {
