@@ -25,14 +25,17 @@
     body > * { direction: ltr; }
     main { text-align: right; font-family: ui-monospace, monospace; }
     img {
-      width: min(100%, 620px); justify-self: left;
-      /* shrink instead of sliding under the game strip on short windows */
+      /* out of the grid: pinned to the corner, bleeding off the top-left edge */
+      position: fixed; top: -200px; left: -200px; z-index: -1;
+      width: min(88vw, 682px);
       max-height: max(120px, calc(100vh - 350px));
       object-fit: contain; object-position: left top;
+      animation: spin 240s linear infinite;
     }
+    @keyframes spin { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
     h1 {
       letter-spacing: 0.3em; text-transform: uppercase; margin: 0 0 0.5rem;
-      font-size: 4rem; color: #4a5389;
+      font-size: 4rem; color: #564b9c;
       -webkit-text-stroke: 6px #a2d741;
       paint-order: stroke fill; /* stroke behind fill = outline sits outside the letters */
     }
@@ -51,7 +54,7 @@
       75%      { transform: translate(-3px, -2px); }
     }
     main a { animation: float 7s ease-in-out infinite; }
-    @media (prefers-reduced-motion: reduce) { main a { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { main a, img { animation: none; } }
 
     /* shark game strip */
     #game {
@@ -67,15 +70,34 @@
     #game .sprite { position: absolute; font-size: 40px; line-height: 1; z-index: 2; }
     #game .decor { position: absolute; line-height: 1; pointer-events: none; }
     #shark { transform: scaleX(-1); } /* emoji faces left; flip to swim right */
-    #score {
-      position: absolute; top: 8px; right: 12px;
-      font-family: monospace; font-size: 14px; color: #a8f5c0; z-index: 4;
+    #score, #msg, #mute, #info {
+      position: absolute; z-index: 4;
+      font-family: monospace; font-size: 17px; font-weight: bold; color: #fff; white-space: nowrap;
+      background: #f769ad; border: 2px solid #fff; /* logo pink */
+      padding: 6px 14px; border-radius: 6px; line-height: 21px;
     }
-    #msg {
-      position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
-      font-family: monospace; font-size: 14px; color: #f2f2f2; white-space: nowrap; z-index: 4;
-      background: rgba(8, 6, 15, 0.75); padding: 6px 14px; border-radius: 6px;
+    #score { top: 34px; right: 136px; }
+    #mute, #info { top: 34px; cursor: pointer; font-size: 15px; padding: 6px 10px; }
+    #mute { right: 74px; }
+    #info { right: 12px; }
+    #help {
+      background: #f769ad; color: #fff; border: 2px solid #fff; border-radius: 8px;
+      font-family: monospace; font-size: 19px; font-weight: bold; padding: 0; line-height: 2;
+      outline: none;
     }
+    #hbody { padding: 24px 40px 24px 30px; position: relative; }
+    #hx {
+      position: absolute; top: 8px; right: 10px; cursor: pointer;
+      background: none; border: none; color: #fff; font: bold 18px monospace; outline: none;
+    }
+    #help::backdrop { background: rgba(8, 6, 15, 0.6); }
+    #song {
+      position: absolute; top: 10px; right: 12px; z-index: 4;
+      font-family: monospace; font-size: 12px; color: #fff;
+      text-decoration: none;
+    }
+    #song:hover { text-decoration: underline; }
+    #msg { top: 30px; left: 50%; transform: translateX(-50%); text-transform: uppercase; }
     #msg:empty { display: none; }
   </style>
 </head>
@@ -90,8 +112,22 @@
   <div id="game">
     <div id="water"></div>
     <span id="shark" class="sprite">🦈</span>
+    <a id="song" href="https://www.newgrounds.com/audio/listen/1459250" target="_blank" rel="noopener">♪ Sea Shanty 2 (OSRS Remix) — JizzyJazz</a>
     <span id="score"></span>
+    <span id="mute">🔊</span>
+    <span id="info">ℹ️</span>
+    <dialog id="help">
+      <div id="hbody">
+        <button id="hx">✕</button>
+        <b>CONTROLS</b><br>
+        ↑ / SPACE / TAP — jump<br>
+        ↓ / HOLD — dive<br>
+        ⛵ dive under the boats<br>
+        🪨 jump over the rocks
+      </div>
+    </dialog>
     <span id="msg">↑ / tap to play</span>
+    <audio id="bgm" src="bgm.mp3" loop preload="none"></audio>
   </div>
 
   <script>
@@ -99,7 +135,21 @@
     // (px, positive = airborne, negative = submerged). Waterline = top of #water.
     const WATER = 90, SHARK_X = 200, DIVE_Y = -48;
     const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
-          scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg');
+          scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg'),
+          bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute');
+
+    muteEl.addEventListener('click', () => {
+      bgm.muted = !bgm.muted;
+      muteEl.textContent = bgm.muted ? '🔇' : '🔊';
+    });
+    // keep the strip's touch controls from swallowing taps on the buttons
+    muteEl.addEventListener('touchstart', e => e.stopPropagation());
+    const helpEl = document.getElementById('help'), infoEl = document.getElementById('info');
+    infoEl.addEventListener('click', () => helpEl.showModal());
+    infoEl.addEventListener('touchstart', e => e.stopPropagation());
+    // clicks on the backdrop (outside #hbody) target the dialog itself
+    helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.close(); });
+    document.getElementById('hx').addEventListener('click', () => helpEl.close());
 
     let state = 'idle', y = 0, vy = 0, diving = false;
     let score = 0, hi = +localStorage.sharkHi || 0, t = 0, obstacles = [];
@@ -123,6 +173,7 @@
         obstacles.forEach(o => o.el.remove());
         obstacles = []; score = 0; y = 0; vy = 0; state = 'run';
         msgEl.textContent = ''; sharkEl.textContent = '🦈';
+        bgm.volume = 0.2; bgm.play(); // low volume; started from a user gesture
       }
     }
 
@@ -161,7 +212,9 @@
         el.style.zIndex = z;
         if (opacity) el.style.opacity = opacity;
         game.appendChild(el);
-        decor.push({ el, x: Math.random() * innerWidth, mult });
+        // clouds, birds and fish keep drifting while the game is paused; islands and coral don't
+        const ambient = ['☁️', '🕊️', '🐟', '🐠', '🐡'].includes(emoji);
+        decor.push({ el, x: Math.random() * innerWidth, mult, ambient });
       }
     }
     seedDecor([ // sky + horizon, behind the water
@@ -180,6 +233,7 @@
       hi = Math.max(hi, score); localStorage.sharkHi = hi;
       sharkEl.textContent = '💀';
       msgEl.textContent = 'GAME OVER — ↑ to restart';
+      bgm.pause();
     }
 
     function tick() {
@@ -210,8 +264,14 @@
           if (d.x < -100) d.x = innerWidth + 100;
           d.el.style.left = d.x + 'px';
         }
-      } else if (state === 'idle') {
-        y = Math.sin(t / 20) * 4; // idle bob
+      } else {
+        for (const d of decor) {
+          if (!d.ambient) continue;
+          d.x -= 0.4 * d.mult; // slowest drift while paused
+          if (d.x < -100) d.x = innerWidth + 100;
+          d.el.style.left = d.x + 'px';
+        }
+        if (state === 'idle') y = Math.sin(t / 20) * 4; // idle bob
       }
       place(sharkEl, SHARK_X, y);
       scoreEl.textContent = 'HI ' + String(hi | 0).padStart(5, '0') + '  ' + String(score | 0).padStart(5, '0');
@@ -219,6 +279,7 @@
     }
 
     addEventListener('keydown', e => {
+      if (helpEl.open) return; // don't control the game through the modal
       if (e.code === 'ArrowUp' || e.code === 'Space') { e.preventDefault(); jump(); }
       if (e.code === 'ArrowDown') { e.preventDefault(); diving = true; if (state !== 'run') start(); }
     });
