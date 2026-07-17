@@ -39,6 +39,14 @@
       color: #3ddc68; text-decoration: none; letter-spacing: 0.15em;
     }
     main a:hover { filter: brightness(1.2); }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      25%      { transform: translate(2px, -4px); }
+      50%      { transform: translate(-2px, -6px); }
+      75%      { transform: translate(-3px, -2px); }
+    }
+    main a { animation: float 7s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { main a { animation: none; } }
 
     /* shark game strip */
     #game {
