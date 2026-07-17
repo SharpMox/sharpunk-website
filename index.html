@@ -27,10 +27,13 @@
     main { text-align: right; font-family: ui-monospace, monospace; min-width: 0; }
     img {
       /* out of the grid: pinned to the corner, bleeding off the top-left edge */
-      position: fixed; top: -200px; left: -200px; z-index: -1;
-      width: min(88vw, 682px);
-      max-height: max(120px, calc(100vh - 350px));
-      object-fit: contain; object-position: left top;
+      /* height cap folded into width (art ratio 267.3:236.4 = 1.13) so the box
+         always hugs the art — keeps the rotation axis on the art's center */
+      --lw: max(135px, min(88vw, 682px, calc((100vh - 350px) * 1.13)));
+      position: fixed; z-index: -1;
+      width: var(--lw);
+      /* bleed scales with the logo so it never vanishes off the corner */
+      top: calc(var(--lw) * -0.3); left: calc(var(--lw) * -0.3);
       animation: spin 240s linear infinite;
     }
     @keyframes spin { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
@@ -107,7 +110,7 @@
     @media (max-width: 700px) {
       body { padding: 24px 24px 280px; gap: 24px; grid-template-columns: 1fr; }
       main { margin-top: 48px; }
-      img { top: -80px; left: -80px; width: min(75vw, 682px); }
+      img { --lw: max(135px, min(75vw, 682px, calc((100vh - 350px) * 1.13))); }
       /* shrink the whole strip 20% for visibility; 125vw x 0.8 = full width */
       #game { width: 125vw; right: auto; transform: scale(0.8); transform-origin: bottom left; }
     }
