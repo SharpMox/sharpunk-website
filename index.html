@@ -105,6 +105,7 @@
     /* phones: tighter padding, smaller logo bleed, prompt below the HUD row */
     @media (max-width: 700px) {
       body { padding: 24px 24px 280px; gap: 24px; grid-template-columns: 1fr; }
+      main { margin-top: 48px; }
       img { top: -80px; left: -80px; width: min(75vw, 682px); }
       #msg { top: 90px; }
     }
@@ -143,7 +144,8 @@
   <script>
     // Shark runner. Coordinate system: y = shark's offset from the waterline
     // (px, positive = airborne, negative = submerged). Waterline = top of #water.
-    const WATER = 90, SHARK_X = Math.min(200, innerWidth * 0.25), DIVE_Y = -48;
+    // narrow screens: hug the left edge for maximum reaction time
+    const WATER = 90, SHARK_X = innerWidth < 500 ? 16 : Math.min(200, innerWidth * 0.25), DIVE_Y = -48;
     const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
           scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg'),
           bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute');
