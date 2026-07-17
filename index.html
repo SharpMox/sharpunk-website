@@ -16,7 +16,7 @@
       grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
       align-items: start;
       gap: 50px;
-      padding: 50px 50px 230px; /* room for the fixed game strip */
+      padding: 50px 50px 300px; /* room for the fixed game strip */
       background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
       color: #f2f2f2;
       font-family: system-ui, sans-serif;
@@ -29,7 +29,7 @@
 
     /* shark game strip */
     #game {
-      position: fixed; bottom: 0; left: 0; right: 0; height: 180px;
+      position: fixed; bottom: 0; left: 0; right: 0; height: 250px;
       overflow: hidden; touch-action: none; user-select: none;
     }
     #water {
@@ -38,7 +38,7 @@
       border-top: 2px solid rgba(160, 215, 255, 0.6);
     }
     #game .sprite { position: absolute; font-size: 40px; line-height: 1; }
-    #shark { left: 40px; transform: scaleX(-1); } /* emoji faces left; flip to swim right */
+    #shark { transform: scaleX(-1); } /* emoji faces left; flip to swim right */
     #score {
       position: absolute; top: 8px; right: 12px;
       font-family: monospace; font-size: 14px; color: #a8f5c0;
@@ -66,7 +66,7 @@
   <script>
     // Shark runner. Coordinate system: y = shark's offset from the waterline
     // (px, positive = airborne, negative = submerged). Waterline = top of #water.
-    const WATER = 90, SHARK_X = 40, DIVE_Y = -48;
+    const WATER = 90, SHARK_X = 120, DIVE_Y = -48;
     const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
           scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg');
 
@@ -99,10 +99,10 @@
       const boat = Math.random() < 0.5;
       const el = document.createElement('span');
       el.className = 'sprite';
-      el.textContent = boat ? '🚤' : '🪝';
+      el.textContent = boat ? '⛵' : '🪝';
       game.appendChild(el);
-      // boat rides on the surface (dive under it); hook tip dangles just below it (jump over)
-      obstacles.push({ el, x: innerWidth + 40, cy: boat ? 14 : -10, boat });
+      // sailboat rides the surface (dive under it); hook dangles into the water (jump over)
+      obstacles.push({ el, x: innerWidth + 40, cy: boat ? 14 : -14, boat });
     }
 
     function die() {
@@ -127,7 +127,9 @@
         for (const o of obstacles) {
           o.x -= speed;
           place(o.el, o.x, o.cy);
-          if (Math.abs(o.x - SHARK_X) < 30 && Math.abs(o.cy - y) < 26) die();
+          // sail reaches all the way up (jumping always clips it); hook reaches all
+          // the way down (diving always snags it) — each has exactly one escape
+          if (Math.abs(o.x - SHARK_X) < 30 && (o.boat ? y > -30 : y < 26)) die();
         }
         obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
       } else if (state === 'idle') {
