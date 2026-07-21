@@ -95,6 +95,13 @@
       position: absolute; top: 8px; right: 10px; cursor: pointer;
       background: none; border: none; color: #fff; font: bold 18px monospace; outline: none;
     }
+    /* death-mode extras inside the help dialog (hidden until you die) */
+    #gameover:not([hidden]) { display: block; font-size: 20px; margin-bottom: 10px; }
+    #retry:not([hidden]) {
+      display: block; margin-top: 16px; cursor: pointer; letter-spacing: 0.1em;
+      background: rgba(247, 105, 173, 0.9); color: #fff; border: 2px solid #fff;
+      border-radius: 6px; font: bold 16px monospace; padding: 8px 20px; outline: none;
+    }
     #help::backdrop { background: rgba(8, 6, 15, 0.6); }
     #song {
       position: absolute; top: 10px; right: 12px; z-index: 4;
@@ -113,6 +120,18 @@
       img { --lw: max(135px, min(75vw, 682px, calc((100vh - 350px) * 1.13))); }
       /* shrink the whole strip 20% for visibility; 125vw x 0.8 = full width */
       #game { width: 125vw; right: auto; transform: scale(0.8); transform-origin: bottom left; }
+    }
+
+    /* landscape phones: short viewport — cap title/logo by height so the
+       header stops crowding the content and the game strip */
+    @media (orientation: landscape) and (max-height: 500px) {
+      body { padding: 12px 24px 220px; gap: 12px; }
+      /* title + tagline + link on one row so the header clears the game strip */
+      main { margin-top: 12px; display: flex; align-items: center;
+             justify-content: flex-end; flex-wrap: wrap; gap: 6px 20px; }
+      main h1, main a { margin: 0; }
+      h1 { font-size: min(7vw, 8vh); -webkit-text-stroke-width: 4px; }
+      img { --lw: max(110px, min(46vh, 40vw)); }
     }
   </style>
 </head>
@@ -134,12 +153,14 @@
     <dialog id="help">
       <div id="hbody">
         <button id="hx">✕</button>
+        <b id="gameover" hidden>💀 GAME OVER</b>
         <b>CONTROLS</b><br>
-        ↑ / SPACE / TAP — Jump<br>
-        ↓ / HOLD — Dive<br>
+        ↑ / SPACE / TAP / swipe up — Jump<br>
+        ↓ / swipe down — Dive<br>
         <b>OBSTACLES</b><br>
         ⛵ Dive under the boats<br>
         🪨 Jump over the rocks
+        <button id="retry" hidden>▶ PLAY AGAIN</button>
       </div>
     </dialog>
     <span id="msg">↑ / tap to play</span>
@@ -163,8 +184,15 @@
       bgm.muted = !bgm.muted;
       muteEl.textContent = bgm.muted ? '🔇' : '🔊';
     });
-    const helpEl = document.getElementById('help'), infoEl = document.getElementById('info');
-    infoEl.addEventListener('click', () => helpEl.showModal());
+    const helpEl = document.getElementById('help'), infoEl = document.getElementById('info'),
+          retryEl = document.getElementById('retry'), gameoverEl = document.getElementById('gameover');
+    // same dialog serves both roles: info (controls only) and death (adds GAME OVER + retry)
+    function openHelp(death) {
+      retryEl.hidden = gameoverEl.hidden = !death;
+      if (!helpEl.open) helpEl.showModal(); // showModal throws if already open (info up when you die)
+    }
+    infoEl.addEventListener('click', () => openHelp(false));
+    retryEl.addEventListener('click', () => { helpEl.close(); start(); });
     // clicks on the backdrop (outside #hbody) target the dialog itself
     helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.close(); });
     document.getElementById('hx').addEventListener('click', () => helpEl.close());
@@ -189,7 +217,7 @@
     function start() {
       if (state === 'dead' || state === 'idle') {
         obstacles.forEach(o => o.el.remove());
-        obstacles = []; score = 0; y = 0; vy = 0; state = 'run';
+        obstacles = []; score = 0; y = 0; vy = 0; diving = false; state = 'run';
         msgEl.textContent = ''; sharkEl.textContent = '🦈';
         bgm.volume = 0.2; bgm.play(); // low volume; started from a user gesture
       }
@@ -250,8 +278,9 @@
       state = 'dead';
       hi = Math.max(hi, score); localStorage.sharkHi = hi;
       sharkEl.textContent = '💀';
-      msgEl.textContent = 'GAME OVER — ↑ to restart';
+      msgEl.textContent = 'GAME OVER — ↑ to restart'; // shown if the modal is dismissed
       bgm.pause();
+      openHelp(true);
     }
 
     function tick() {
@@ -298,24 +327,35 @@
     }
 
     addEventListener('keydown', e => {
-      if (helpEl.open) return; // don't control the game through the modal
+      if (helpEl.open) {
+        // death modal: a jump key retries; the info modal ignores game keys
+        if (!retryEl.hidden && (e.code === 'ArrowUp' || e.code === 'Space')) {
+          e.preventDefault(); helpEl.close(); start();
+        }
+        return;
+      }
       if (e.code === 'ArrowUp' || e.code === 'Space') { e.preventDefault(); jump(); }
       if (e.code === 'ArrowDown') { e.preventDefault(); diving = true; if (state !== 'run') start(); }
     });
     addEventListener('keyup', e => { if (e.code === 'ArrowDown') diving = false; });
 
-    // touch: tap = jump, hold = dive — anywhere on the page except real controls
+    // touch: swipe up = surface/jump, swipe down = dive (toggle, stays under),
+    // tap = jump — anywhere on the page except real controls
     const isControl = e => e.target.closest('a, button, dialog, #mute, #info');
-    let holdTimer;
+    const SWIPE = 24;
+    let startY = null;
     document.addEventListener('touchstart', e => {
       if (isControl(e)) return;
-      e.preventDefault();
-      holdTimer = setTimeout(() => { holdTimer = null; diving = true; if (state !== 'run') start(); }, 120);
+      e.preventDefault(); // also blocks page scroll so a swipe drives the shark
+      startY = e.touches[0].clientY;
     }, { passive: false });
     document.addEventListener('touchend', e => {
-      if (isControl(e)) return;
-      if (holdTimer) { clearTimeout(holdTimer); jump(); }
-      diving = false;
+      if (isControl(e) || startY === null) return;
+      const dy = e.changedTouches[0].clientY - startY;
+      startY = null;
+      if (dy < -SWIPE) { if (diving) diving = false; else jump(); }      // swipe up
+      else if (dy > SWIPE) { diving = true; if (state !== 'run') start(); } // swipe down
+      else jump();                                                        // tap
     });
 
     tick();
