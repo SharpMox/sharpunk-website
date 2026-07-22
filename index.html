@@ -18,7 +18,7 @@
       grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
       align-items: start;
       gap: 50px;
-      padding: 50px 50px 300px; /* room for the fixed game strip */
+      padding: 50px 50px 360px; /* room for the fixed game strip + the HUD above it */
       background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
       color: #f2f2f2;
       font-family: system-ui, sans-serif;
@@ -75,20 +75,29 @@
     #game .sprite { position: absolute; font-size: 40px; line-height: 1; z-index: 2; }
     #game .decor { position: absolute; line-height: 1; pointer-events: none; }
     #shark { transform: scaleX(-1); } /* emoji faces left; flip to swim right */
-    #score, #msg, #mute, #info {
-      position: absolute; z-index: 4;
+    /* HUD lives outside #game so it clears the strip's clouds — and so it
+       escapes the 0.8 phone scale and stays full size. Credit on its own
+       line, pills right-aligned beneath it. */
+    #hud {
+      position: fixed; right: 12px; bottom: 250px; z-index: 4;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+      padding-bottom: 12px; max-width: calc(100vw - 24px);
+    }
+    #hud div { display: flex; gap: 8px; }
+    #score, #msg, #mute, #info, #rot {
+      z-index: 4;
       font-family: monospace; font-size: 17px; font-weight: bold; color: #fff; white-space: nowrap;
       background: rgba(247, 105, 173, 0.7); border: 2px solid #fff; /* logo pink */
       padding: 6px 14px; border-radius: 6px; line-height: 21px;
     }
-    #score { top: 34px; right: 136px; }
-    #mute, #info { top: 34px; cursor: pointer; font-size: 15px; padding: 6px 10px; }
-    #mute { right: 74px; }
-    #info { right: 12px; }
+    #mute, #info { cursor: pointer; font-size: 15px; padding: 6px 10px; }
     #help {
-      background: rgba(247, 105, 173, 0.7); color: #fff; border: 2px solid #fff; border-radius: 8px;
+      background: rgba(247, 105, 173, 0.85); color: #fff; border: 2px solid #fff; border-radius: 8px;
       font-family: monospace; font-size: 19px; font-weight: bold; padding: 0; line-height: 2;
       outline: none;
+      /* bottom-aligned with a gap: the UA's `margin: auto` still centres it
+         horizontally, and `margin-top` stays auto so it's pushed all the way down */
+      margin-bottom: 24px;
     }
     #hbody { padding: 24px 40px 24px 30px; position: relative; }
     #hx {
@@ -96,30 +105,45 @@
       background: none; border: none; color: #fff; font: bold 18px monospace; outline: none;
     }
     /* death-mode extras inside the help dialog (hidden until you die) */
-    #gameover:not([hidden]) { display: block; font-size: 20px; margin-bottom: 10px; }
-    #retry:not([hidden]) {
-      display: block; margin-top: 16px; cursor: pointer; letter-spacing: 0.1em;
-      background: rgba(247, 105, 173, 0.9); color: #fff; border: 2px solid #fff;
-      border-radius: 6px; font: bold 16px monospace; padding: 8px 20px; outline: none;
+    /* -10px right cancels #hbody's asymmetric padding (40 right for the ✕ vs 30
+       left), so these two centre on the card rather than 5px off to the left */
+    #gameover:not([hidden]) {
+      display: block; font-size: 20px; margin: 0 -10px 10px 0; text-align: center;
     }
+    /* plain text, not a control — inherits the dialog's font/colour.
+       The whole dialog body is the hit target instead (see hbody click handler). */
+    #retry:not([hidden]) { display: block; margin: 16px -10px 0 0; text-align: center; }
     #help::backdrop { background: rgba(8, 6, 15, 0.6); }
     #song {
-      position: absolute; top: 10px; right: 12px; z-index: 4;
       font-family: monospace; font-size: 12px; color: #fff;
       text-decoration: none;
-      max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     #song:hover { text-decoration: underline; }
-    #msg { top: 90px; left: 50%; transform: translateX(-50%); text-transform: uppercase; }
+    /* raised into the space the HUD row used to occupy */
+    #msg { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); text-transform: uppercase; }
+    /* portrait-phone hint; off everywhere else, switched on in the media query below.
+       ponytail: no JS — #msg empties on start and refills on death, so the sibling
+       rule hides the hint for exactly the duration of a run */
+    #rot { display: none; position: absolute; top: 34px; left: 50%; transform: translateX(-50%); }
+    #msg:empty + #rot { display: none; }
     #msg:empty { display: none; }
 
-    /* phones: tighter padding, smaller logo bleed, prompt below the HUD row */
+    /* phones: tighter padding, smaller logo bleed, strip + HUD scaled to fit */
     @media (max-width: 700px) {
       body { padding: 24px 24px 280px; gap: 24px; grid-template-columns: 1fr; }
       main { margin-top: 48px; }
       img { --lw: max(135px, min(75vw, 682px, calc((100vh - 350px) * 1.13))); }
       /* shrink the whole strip 20% for visibility; 125vw x 0.8 = full width */
       #game { width: 125vw; right: auto; transform: scale(0.8); transform-origin: bottom left; }
+      #hud { bottom: 200px; } /* strip renders 250 x 0.8 = 200px tall here */
+    }
+
+    /* portrait phones only: real hardware that can actually be rotated.
+       Hint takes the strip's top slot; the play prompt drops below it. */
+    @media (orientation: portrait) and (max-width: 700px) {
+      #rot { display: block; }
+      #msg { top: 76px; }
     }
 
     /* landscape phones: short viewport — cap title/logo by height so the
@@ -143,27 +167,33 @@
   </main>
   <img src="logo.svg" alt="Sharpunk logo">
 
+  <div id="hud">
+    <a id="song" href="https://www.newgrounds.com/audio/listen/1459250" target="_blank" rel="noopener">♪ Sea Shanty 2 (OSRS Remix) — JizzyJazz</a>
+    <div>
+      <span id="score"></span>
+      <span id="mute">🔊</span>
+      <span id="info">ℹ️</span>
+    </div>
+  </div>
+
   <div id="game">
     <div id="water"></div>
     <span id="shark" class="sprite">🦈</span>
-    <a id="song" href="https://www.newgrounds.com/audio/listen/1459250" target="_blank" rel="noopener">♪ Sea Shanty 2 (OSRS Remix) — JizzyJazz</a>
-    <span id="score"></span>
-    <span id="mute">🔊</span>
-    <span id="info">ℹ️</span>
     <dialog id="help">
       <div id="hbody">
         <button id="hx">✕</button>
         <b id="gameover" hidden>💀 GAME OVER</b>
         <b>CONTROLS</b><br>
-        ↑ / SPACE / TAP / swipe up — Jump<br>
-        ↓ / swipe down — Dive<br>
+        ↑ / SPACE / TAP / SWIPE ↑ — Jump<br>
+        ↓ / SWIPE ↓ — Dive<br>
         <b>OBSTACLES</b><br>
         ⛵ Dive under the boats<br>
         🪨 Jump over the rocks
-        <button id="retry" hidden>▶ PLAY AGAIN</button>
+        <div id="retry" hidden>JUMP TO RESTART</div>
       </div>
     </dialog>
     <span id="msg">↑ / tap to play</span>
+    <span id="rot">↻ ROTATE FOR MORE ROOM</span>
     <audio id="bgm" src="bgm.mp3" loop preload="none"></audio>
   </div>
 
@@ -192,7 +222,11 @@
       if (!helpEl.open) helpEl.showModal(); // showModal throws if already open (info up when you die)
     }
     infoEl.addEventListener('click', () => openHelp(false));
-    retryEl.addEventListener('click', () => { helpEl.close(); start(); });
+    // in death mode a tap/click anywhere in the dialog body counts as the jump;
+    // ✕ has its own handler and must only close
+    document.getElementById('hbody').addEventListener('click', e => {
+      if (!retryEl.hidden && e.target.id !== 'hx') { helpEl.close(); start(); }
+    });
     // clicks on the backdrop (outside #hbody) target the dialog itself
     helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.close(); });
     document.getElementById('hx').addEventListener('click', () => helpEl.close());
@@ -219,7 +253,7 @@
         obstacles.forEach(o => o.el.remove());
         obstacles = []; score = 0; y = 0; vy = 0; diving = false; state = 'run';
         msgEl.textContent = ''; sharkEl.textContent = '🦈';
-        bgm.volume = 0.2; bgm.play(); // low volume; started from a user gesture
+        bgm.volume = 0.1; bgm.play(); // low volume; started from a user gesture
       }
     }
 
