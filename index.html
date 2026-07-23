@@ -72,9 +72,62 @@
       border-top: 2px solid rgba(160, 215, 255, 0.6);
       z-index: 1;
     }
-    #game .sprite { position: absolute; font-size: 40px; line-height: 1; z-index: 2; }
-    #game .decor { position: absolute; line-height: 1; pointer-events: none; }
-    #shark { transform: scaleX(-1); } /* emoji faces left; flip to swim right */
+    /* --- sprites (sheets are @2x, sized here in logical px) ---
+       Animated sheets are horizontal strips of equal cells. `background-size:
+       auto 100%` makes one cell exactly the element's width, so the keyframes
+       just walk background-position-x by whole cells.
+       steps(n, jump-none) is deliberate: it lands on both the FIRST and LAST
+       cell, so `forwards` holds the real final frame. Plain steps() would
+       finish one cell past the end of the strip (i.e. on nothing). */
+    /* longhands, not the `background` shorthand: this rule outranks the
+       per-asset .island/.cloud/... classes, and the shorthand would reset
+       their background-image back to none */
+    #game .sprite, #game .decor, #game .part {
+      position: absolute;
+      background-repeat: no-repeat; background-position: 0 0; background-size: 100% 100%;
+    }
+    #game .decor { pointer-events: none; }
+    #game .sprite { z-index: 2; }
+    #game .pile { width: 0; height: 0; }   /* zero-size anchor; parts hang off it */
+
+    /* #game prefix needed: the shared `.sprite`/`.decor` rule above is (1,1,0)
+       and would otherwise win, squashing the whole strip into one cell */
+    #game #shark {
+      width: 93px; height: 75px;
+      background-image: url(img/sharkswim.webp); background-size: auto 100%;
+      transform: scaleX(-1);               /* art faces left; flip to swim right */
+      animation: swim .34s steps(2) infinite;
+    }
+    /* must also carry the #game prefix, or the base rule above outranks them */
+    #game #shark.jump { background-image: url(img/sharkjump.webp); animation: a-jump .73s steps(9, jump-none) forwards; }
+    #game #shark.dive { background-image: url(img/sharkdive.webp); animation: a-dive .2s  steps(5, jump-none) forwards; }
+    #game #shark.surf { background-image: url(img/sharkdive.webp); animation: a-surf .15s steps(3, jump-none) forwards; }
+    #game #shark.dead { background-image: url(img/sharkdead.webp); animation: a-dead .5s  steps(4, jump-none) forwards; }
+    /* cell = 93px; dive is one 8-frame arc split into descend (f0-f4) and surface (f5-f7) */
+    @keyframes swim   { to { background-position-x: -186px } }
+    @keyframes a-jump { to { background-position-x: -744px } }
+    @keyframes a-dive { to { background-position-x: -372px } }
+    @keyframes a-surf { from { background-position-x: -465px } to { background-position-x: -651px } }
+    @keyframes a-dead { to { background-position-x: -279px } }
+
+    /* bird renders at two sizes, so its cell width varies — carry it in --cw */
+    #game .bird { background-image: url(img/bird.webp); background-size: auto 100%;
+                  animation: fly .39s steps(3) infinite; }
+    @keyframes fly { to { background-position-x: calc(var(--cw) * -3) } }
+
+    .island { background-image: url(img/island.webp) }
+    .cloud  { background-image: url(img/cloud.webp) }
+    .cloud2 { background-image: url(img/cloud2.webp) }
+    .cloud3 { background-image: url(img/cloud3.webp) }
+    .coral  { background-image: url(img/coral.webp) }
+    .fish   { background-image: url(img/fish.webp) }
+    .fish2  { background-image: url(img/fish2.webp) }
+    .boat   { background-image: url(img/boat.webp) }
+    .rock   { background-image: url(img/rock.webp) }
+    .rock2  { background-image: url(img/rock2.webp) }
+    /* obstacle art inline in the modal, so the instructions show the real thing */
+    .ico { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.35em;
+           background-repeat: no-repeat; background-position: center; background-size: contain; }
     /* HUD lives outside #game so it clears the strip's clouds — and so it
        escapes the 0.8 phone scale and stays full size. Credit on its own
        line, pills right-aligned beneath it. */
@@ -178,7 +231,7 @@
 
   <div id="game">
     <div id="water"></div>
-    <span id="shark" class="sprite">🦈</span>
+    <span id="shark" class="sprite"></span>
     <dialog id="help">
       <div id="hbody">
         <button id="hx">✕</button>
@@ -187,8 +240,8 @@
         ↑ / SPACE / TAP / SWIPE ↑ — Jump<br>
         ↓ / SWIPE ↓ — Dive<br>
         <b>OBSTACLES</b><br>
-        ⛵ Dive under the boats<br>
-        🪨 Jump over the rocks
+        <i class="ico boat"></i> Dive under the boats<br>
+        <i class="ico rock"></i> Jump over the rocks
         <div id="retry" hidden>JUMP TO RESTART</div>
       </div>
     </dialog>
@@ -238,9 +291,33 @@
     // assumes ~60fps; switch to dt if high-refresh screens feel too fast
     const GRAV = 0.5, JUMP_V = 11, BASE_SPEED = 6;
 
-    function place(el, x, cy) { // cy = sprite center relative to waterline
-      el.style.left = x + 'px';
-      el.style.bottom = (WATER + cy - 20) + 'px';
+    // natural width/height ratio of each sprite sheet, from tools/build-assets.py
+    const ASPECT = { island: 0.633, cloud: 2.188, cloud2: 1.438, cloud3: 1.979, bird: 1.458,
+                     coral: 0.813, fish: 1.583, fish2: 1.808, boat: 0.808, rock: 0.573, rock2: 0.445 };
+    function sprite(cls, h, kind) {
+      const el = document.createElement('span');
+      el.className = kind + ' ' + cls;
+      const w = Math.round(h * ASPECT[cls]);
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+      if (cls === 'bird') el.style.setProperty('--cw', w + 'px'); // cell width for @keyframes fly
+      return el;
+    }
+
+    // the shark is the only thing that moves vertically, so it's the only
+    // thing that needs repositioning on both axes each frame
+    const SHARK_H = 75;
+    function placeShark() {
+      sharkEl.style.left = SHARK_X + 'px';
+      sharkEl.style.bottom = (WATER + y - SHARK_H / 2) + 'px';
+    }
+
+    // class swap drives the CSS animations; only write it on an actual change,
+    // otherwise every frame restarts the animation from frame 0
+    let sharkState = '';
+    function setShark(s) {
+      if (s !== sharkState) sharkEl.className = 'sprite' + (s ? ' ' + s : '');
+      sharkState = s;
     }
 
     function jump() {
@@ -252,30 +329,35 @@
       if (state === 'dead' || state === 'idle') {
         obstacles.forEach(o => o.el.remove());
         obstacles = []; score = 0; y = 0; vy = 0; diving = false; state = 'run';
-        msgEl.textContent = ''; sharkEl.textContent = '🦈';
+        msgEl.textContent = ''; setShark('');
         bgm.volume = 0.1; bgm.play(); // low volume; started from a user gesture
       }
     }
 
     function spawn() {
       const boat = Math.random() < 0.5;
-      const el = document.createElement('span');
-      el.className = 'sprite';
+      let el;
       if (boat) {
-        el.textContent = '⛵';
-        el.style.fontSize = '100px';
+        // sailboat floats with its hull just under the waterline — dive beneath it
+        el = sprite('boat', 120, 'sprite');
+        el.style.bottom = (WATER - 5) + 'px';
       } else {
         // main rock breaking the surface + smaller rocks piled beneath it,
-        // overflowing past the bottom of the strip
-        el.innerHTML =
-          '<span style="position:absolute;bottom:0;left:0;font-size:110px">🪨</span>' +
-          '<span style="position:absolute;bottom:-35px;left:-30px;font-size:80px">🪨</span>' +
-          '<span style="position:absolute;bottom:-50px;left:40px;font-size:90px">🪨</span>';
+        // overflowing past the bottom of the strip — jump over it
+        el = document.createElement('span');
+        el.className = 'sprite pile';
+        el.style.bottom = '0px';
+        for (const [c, h, b, l] of [['rock', 110, 0, 0], ['rock2', 80, -35, -30], ['rock', 90, -50, 40]]) {
+          const r = sprite(c, h, 'part');
+          r.style.bottom = b + 'px';
+          r.style.left = l + 'px';
+          el.appendChild(r);
+        }
       }
       game.appendChild(el);
-      // sailboat floats with its hull right on the waterline (dive under it);
-      // rock pile is mostly submerged, tip above the surface (jump over it)
-      obstacles.push({ el, x: W() + 40, cy: boat ? 12 : -70, boat });
+      // vertical position never changes, so it's set once here and only
+      // `left` is touched per frame
+      obstacles.push({ el, x: W() + 40, boat });
     }
 
     // parallax decor: seeded once, recycled by wrapping — no spawn/despawn.
@@ -283,35 +365,31 @@
     // fg (coral/fish) at 1.5x in front of the game sprites.
     const decor = [];
     function seedDecor(defs, mult, z, opacity) {
-      for (const [emoji, size, bottom] of defs) {
-        const el = document.createElement('span');
-        el.className = 'decor';
-        el.textContent = emoji;
-        el.style.fontSize = size + 'px';
+      for (const [cls, size, bottom] of defs) {
+        const el = sprite(cls, size, 'decor');
         el.style.bottom = bottom + 'px';
         el.style.zIndex = z;
         if (opacity) el.style.opacity = opacity;
         game.appendChild(el);
         // clouds, birds and fish keep drifting while the game is paused; islands and coral don't
-        const ambient = ['☁️', '🕊️', '🐟', '🐠', '🐡'].includes(emoji);
+        const ambient = ['cloud', 'cloud2', 'cloud3', 'bird', 'fish', 'fish2'].includes(cls);
         decor.push({ el, x: Math.random() * W(), mult, ambient });
       }
     }
     seedDecor([ // sky + horizon, behind the water
-      ['🏝️', 60, WATER - 10], ['🏝️', 44, WATER - 6],
-      ['☁️', 48, 190], ['☁️', 36, 210], ['☁️', 42, 170],
-      ['🕊️', 24, 185], ['🕊️', 20, 205],
+      ['island', 60, WATER - 10], ['island', 44, WATER - 6],
+      ['cloud', 48, 190], ['cloud2', 36, 210], ['cloud3', 42, 170],
+      ['bird', 24, 185], ['bird', 20, 205],
     ], 0.3, 0, 0.55);
     seedDecor([ // seabed + swimmers, in front of everything
-      ['🪸', 48, -14], ['🪸', 38, -10], ['🪸', 44, -16], ['🪸', 36, -8],
-      ['🐟', 24, 30], ['🐠', 26, 12], ['🐡', 22, 44], ['🐟', 20, 20],
+      ['coral', 48, -14], ['coral', 38, -10], ['coral', 44, -16], ['coral', 36, -8],
+      ['fish', 24, 30], ['fish2', 26, 12], ['fish', 22, 44], ['fish2', 20, 20],
     ], 1.5, 3);
     decor.forEach(d => { d.el.style.left = d.x + 'px'; });
 
     function die() {
       state = 'dead';
       hi = Math.max(hi, score); localStorage.sharkHi = hi;
-      sharkEl.textContent = '💀';
       msgEl.textContent = 'GAME OVER — ↑ to restart'; // shown if the modal is dismissed
       bgm.pause();
       openHelp(true);
@@ -333,11 +411,16 @@
 
         for (const o of obstacles) {
           o.x -= speed;
-          place(o.el, o.x, o.cy);
+          o.el.style.left = o.x + 'px'; // vertical position was fixed at spawn
           // sail reaches all the way up (jumping always clips it); rock reaches all
-          // the way down (diving always hits it) — each has exactly one escape
-          const d = o.x - SHARK_X; // hitboxes trimmed to the visible glyph, not the em box
-          if (o.boat ? (d > -85 && d < 30 && y > -26) : (d > -85 && d < 28 && y < 34)) die();
+          // the way down (diving always hits it) — each has exactly one escape.
+          // Hitbox is a shrunken core of the art, not its full box. The shark
+          // sprite is 93px wide where the old emoji was ~40, so a true-to-art
+          // box would keep an obstacle lethal for ~152px instead of ~115 —
+          // long enough that at mobile's 0.75x speed the shark lands (or
+          // surfaces) before it clears. These keep the original ~125px window.
+          const d = o.x - SHARK_X;
+          if (o.boat ? (d > -75 && d < 50 && y > -26) : (d > -78 && d < 48 && y < 34)) die();
         }
         obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
 
@@ -355,7 +438,16 @@
         }
         if (state === 'idle') y = Math.sin(t / 20) * 4; // idle bob
       }
-      place(sharkEl, SHARK_X, y);
+      // pick the pose. `surf` covers the rise back to the surface after a dive:
+      // y eases toward 0 by 0.3/frame, so it clears -2 in ~9 frames (~150ms),
+      // which is what the .15s surface animation is timed to.
+      if (state === 'dead') setShark('dead');
+      else if (state !== 'run') setShark('');       // idle bob keeps swimming
+      else if (y > 0 || vy > 0) setShark('jump');
+      else if (diving) setShark('dive');
+      else if (y < -2) setShark('surf');
+      else setShark('');
+      placeShark();
       scoreEl.textContent = 'HI ' + String(hi | 0).padStart(5, '0') + '  ' + String(score | 0).padStart(5, '0');
       requestAnimationFrame(tick);
     }
@@ -390,6 +482,13 @@
       if (dy < -SWIPE) { if (diving) diving = false; else jump(); }      // swipe up
       else if (dy > SWIPE) { diving = true; if (state !== 'run') start(); } // swipe down
       else jump();                                                        // tap
+    });
+
+    // Sheets only reachable once a run starts: kept off the first-paint path,
+    // then warmed after load so the first jump/dive/death doesn't pop in.
+    addEventListener('load', () => {
+      for (const n of ['sharkjump', 'sharkdive', 'sharkdead', 'boat', 'rock', 'rock2'])
+        new Image().src = 'img/' + n + '.webp';
     });
 
     tick();
