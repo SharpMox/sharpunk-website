@@ -178,8 +178,17 @@ def main():
     print(f"{'bird':<10}{len(fr):>7}{f'{cw}x{ch}':>12}{f'{cw*len(fr)}x{ch}':>13}{size/1024:>8.1f}K")
 
     # ---- static PNGs ----
-    for f in sorted(x for x in os.listdir(SRC) if x.lower().endswith(".png")):
+    # output basename <- source file. Default is the lower-cased filename; the
+    # game's `island` uses ISLAND2.png (the rounded-mound version), so the old
+    # ISLAND.png is skipped rather than emitted as an unused island.webp.
+    SRC_FOR = {"island": "ISLAND2.png"}
+    SKIP = {"ISLAND.png"}
+    for f in sorted(x for x in os.listdir(SRC) if x.lower().endswith(".png") and x not in SKIP):
         base = f[:-4].lower()
+        if base in SRC_FOR and f != SRC_FOR[base]:
+            continue                      # this base is served by an override file
+        if f in SRC_FOR.values():
+            base = next(b for b, s in SRC_FOR.items() if s == f)
         a = dealpha(Image.open(os.path.join(SRC, f)))
         a = a.crop(a.getchannel("A").getbbox())
         h = CSS_H[base] * DPR
