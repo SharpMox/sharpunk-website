@@ -150,6 +150,8 @@
       font: bold 12px/1.4 monospace; color: #fff; white-space: pre;
       background: rgba(0,0,0,.75); padding: 1px 4px; border-radius: 3px;
     }
+    /* the readout IS its own panel — the chip would stack a second black box on it */
+    #dbghud::after { background: none; padding: 0; top: 6px; left: 8px; }
     #dbgbar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 9;
       background: #c0143c; color: #fff; font: bold 13px monospace;
@@ -210,7 +212,7 @@
       display: flex; align-items: center; justify-content: center;
       width: 118px; height: 118px; border-radius: 50%;
       margin: 0 auto 8px; position: relative; left: 5px;
-      background: rgb(82, 182, 255);
+      background: #4464a2;
       border: 2px solid #fff;
     }
     /* cell is exactly 93px at this height (sheet is 1302x150), so the loop
@@ -629,8 +631,10 @@
       // dashed = where the ART is, solid = what actually kills
       const sSprite = mk('transparent', 'sprite 93x75', 7),
             sHit    = mk('rgba(255,224,0,.22)', 'SHARK hitbox', 8, '#ffe000'),
-            hud     = mk('rgba(0,0,0,.8)', '', 9);
-      hud.style.cssText += ';left:8px;bottom:8px;width:250px;height:70px;outline:none';
+            hud     = mk('rgba(0,0,0,.4)', '', 9);
+      hud.id = 'dbghud';
+      // right-hand side: the shark and its zones live on the left
+      hud.style.cssText += ';right:8px;bottom:8px;width:250px;height:70px;outline:none';
       const marks = [];
       const set = (el, l, w, b, h) => {
         el.style.left = l + 'px'; el.style.width = w + 'px';
