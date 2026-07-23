@@ -35,18 +35,66 @@ SHARK_BODY_CSS_H = 45    # a swimming shark is this tall; poses scale from it
 
 
 def dealpha(im):
-    """Clear background-connected white only (keeps white *inside* the art)."""
+    """Clear the white background, including regions the art fully encloses.
+
+    Corner fills handle the outside.  They cannot reach white that the drawing
+    surrounds -- sky between the boat's mast and jib, water between the coral's
+    branches -- so any leftover near-white pixel is used as another fill seed.
+    Seeding (rather than a plain threshold) means the fill spreads into the
+    antialiased fringe on its own, exactly like the outer background.
+
+    Why the >235 seed test matters: the clouds are drawn in a very light blue
+    that lands around 216-224, so a threshold of 215 or lower erases them
+    completely (measured: 0 px caught at >235, ~37-62k at >215).  Nothing in
+    any asset uses >235 white as actual art, so nothing here can seed inside
+    a cloud.
+    """
     im = im.convert("RGB")
     w, h = im.size
+    BG = (255, 0, 255)
     probe = im.copy()
     for pt in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)):
-        ImageDraw.floodfill(probe, pt, (255, 0, 255), thresh=40)
-    out = im.convert("RGBA")
-    px, pp = out.load(), probe.load()
+        ImageDraw.floodfill(probe, pt, BG, thresh=40)
+    src, pp = im.load(), probe.load()
     for y in range(h):
         for x in range(w):
-            if pp[x, y] == (255, 0, 255):
+            if pp[x, y] == BG:
+                continue
+            r, g, b = src[x, y]
+            if r > 235 and g > 235 and b > 235:
+                ImageDraw.floodfill(probe, (x, y), BG, thresh=40)
+    out = im.convert("RGBA")
+    px = out.load()
+    for y in range(h):
+        for x in range(w):
+            if pp[x, y] == BG:
                 px[x, y] = (0, 0, 0, 0)
+    return out
+
+
+def fill_outline(frame, colour=(255, 255, 255)):
+    """Fill transparent area the drawing encloses, leaving the outside clear.
+
+    The birds are drawn as hollow outlines, so their bodies read as gaps.
+    Run this on the FULL canvas, before cropping: a tight crop puts the
+    outline on the edge, and an interior gap touching the edge would be
+    mistaken for outside and left transparent.
+    """
+    w, h = frame.size
+    a = frame.getchannel("A")
+    work = a.point(lambda v: 255 if v < 128 else 0)   # 255 = transparent
+    seeds = [(x, y) for x in range(w) for y in (0, h - 1)] + \
+            [(x, y) for y in range(h) for x in (0, w - 1)]
+    wp = work.load()
+    for pt in seeds:
+        if wp[pt] == 255:
+            ImageDraw.floodfill(work, pt, 128)        # 128 = outside
+    out = frame.copy()
+    op = out.load()
+    for y in range(h):
+        for x in range(w):
+            if wp[x, y] == 255:                        # transparent, not outside
+                op[x, y] = (*colour, 255)
     return out
 
 
@@ -132,8 +180,8 @@ def main():
         css.append((f"shark{key}", n, cw // DPR, ch // DPR))
         print(f"{'shark'+key:<10}{n:>7}{f'{cw}x{ch}':>12}{f'{cw*n}x{ch}':>13}{size/1024:>8.1f}K")
 
-    # ---- bird: own cell, same treatment ----
-    fr = crop_each(frames("BIRD.gif"))
+    # ---- bird: hollow outlines, so fill the bodies before cropping ----
+    fr = crop_each([fill_outline(f) for f in frames("BIRD.gif")])
     bw, bh = max(f.width for f in fr), max(f.height for f in fr)
     bscale = (CSS_H["bird"] * DPR) / bh
     img, cw, ch = sheet(fr, bw, bh, bscale)
