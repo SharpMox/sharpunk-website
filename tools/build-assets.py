@@ -18,7 +18,7 @@ Why this exists (none of it is visible in the binary output):
   last frame is held in CSS instead.
 """
 import os, subprocess, sys
-from PIL import Image, ImageSequence, ImageChops, ImageDraw, ImageStat
+from PIL import Image, ImageSequence, ImageDraw
 
 SRC = os.path.expanduser("~/Documents/SHARK ASSET")
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "img")
@@ -107,22 +107,12 @@ def crop_each(fr):
     return [f.crop(f.getchannel("A").getbbox()) for f in fr]
 
 
-def drop_static(fr, thresh=8.0):
-    """Keep frames that differ meaningfully from the previous kept one.
-
-    SHARKDEAD's real motion scores rms ~16-17 between frames; once the shark
-    has flipped it only wobbles at ~3.4.  8.0 sits cleanly between the two,
-    so the 10 drawn frames reduce to the 4 that actually move.
-    """
-    keep = [fr[0]]
-    for f in fr[1:]:
-        a, b = f, keep[-1]
-        if a.size != b.size:
-            keep.append(f)
-            continue
-        if ImageStat.Stat(ImageChops.difference(a, b)).rms[0] > thresh:
-            keep.append(f)
-    return keep
+# SHARKDEAD is authored as a flip followed by fish circling the stunned
+# shark's head: 4 frames of the shark rolling over, then two 3-frame orbit
+# cycles.  We ship the flip plus ONE orbit cycle and let CSS loop it, so the
+# repeat costs nothing.  (Split explicitly rather than detected: f7-f9 repeat
+# f4-f6 visually but only f8 is pixel-exact, the rest differ by GIF dither.)
+DEAD_FLIP, DEAD_ORBIT = 4, 3
 
 
 def encode(img, base):
@@ -156,11 +146,8 @@ def main():
     for name, key in [("SHARKSWIM.gif", "swim"), ("SHARKJUMP.gif", "jump"),
                       ("SHARKDIVE.gif", "dive"), ("SHARKDEAD.gif", "dead")]:
         raw = frames(name)
-        # compare BEFORE cropping: on the shared canvas the rms scale is
-        # comparable between frames, whereas cropping inflates it ~4x by
-        # discarding transparent area and hides the static tail
         if key == "dead":
-            raw = drop_static(raw)
+            raw = raw[:DEAD_FLIP + DEAD_ORBIT]
         states[key] = crop_each(raw)
 
     body_h = max(f.height for f in states["swim"])      # swimming pose = reference

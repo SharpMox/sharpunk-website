@@ -7,6 +7,7 @@
   <meta name="description" content="Sharpunk — web & games studio. Play the shark runner while you're here.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <style>
+    :root { --accent: #5a1a8f; }   /* the shark's body purple, sampled from the art */
     body {
       margin: 0;
       min-height: 100vh;
@@ -88,7 +89,10 @@
     }
     #game .decor { pointer-events: none; }
     #game .sprite { z-index: 2; }
-    #game .pile { width: 0; height: 0; }   /* zero-size anchor; parts hang off it */
+    /* zero-size anchor; parts hang off it. Behind the water (z0) so the
+       submerged bulk tints blue like the seabed — the tip above the
+       waterline is unaffected, since #water only covers the bottom 90px. */
+    #game .pile { width: 0; height: 0; z-index: 0; }
 
     /* #game prefix needed: the shared `.sprite`/`.decor` rule above is (1,1,0)
        and would otherwise win, squashing the whole strip into one cell */
@@ -102,13 +106,24 @@
     #game #shark.jump { background-image: url(img/sharkjump.webp); animation: a-jump .73s steps(9, jump-none) forwards; }
     #game #shark.dive { background-image: url(img/sharkdive.webp); animation: a-dive .2s  steps(5, jump-none) forwards; }
     #game #shark.surf { background-image: url(img/sharkdive.webp); animation: a-surf .15s steps(3, jump-none) forwards; }
-    #game #shark.dead { background-image: url(img/sharkdead.webp); animation: a-dead .5s  steps(4, jump-none) forwards; }
+    /* death is two phases off one 7-cell sheet: the shark flips once (cells
+       0-3), then fish circle its head forever (cells 4-6). The orbit is
+       declared with a delay equal to the flip's length — during that delay it
+       has no fill, so the flip applies; once it starts it wins, being later
+       in the list. No JS handoff needed. */
+    #game #shark.dead {
+      background-image: url(img/sharkdead.webp);
+      animation: a-dead .52s steps(4, jump-none) forwards,
+                 a-deadloop .39s steps(3) infinite .52s;
+    }
     /* cell = 93px; dive is one 8-frame arc split into descend (f0-f4) and surface (f5-f7) */
     @keyframes swim   { to { background-position-x: -186px } }
     @keyframes a-jump { to { background-position-x: -744px } }
     @keyframes a-dive { to { background-position-x: -372px } }
     @keyframes a-surf { from { background-position-x: -465px } to { background-position-x: -651px } }
-    @keyframes a-dead { to { background-position-x: -279px } }
+    @keyframes a-dead { to { background-position-x: -279px } }           /* cells 0-3 */
+    @keyframes a-deadloop { from { background-position-x: -372px }        /* cells 4-6 */
+                            to   { background-position-x: -651px } }
 
     /* bird renders at two sizes, so its cell width varies — carry it in --cw */
     #game .bird { background-image: url(img/bird.webp); background-size: auto 100%;
@@ -157,13 +172,21 @@
     #score, #msg, #mute, #info, #rot {
       z-index: 4;
       font-family: monospace; font-size: 17px; font-weight: bold; color: #fff; white-space: nowrap;
-      background: rgba(247, 105, 173, 0.7); border: 2px solid #fff; /* logo pink */
+      background: #f769ad; border: 2px solid #fff; /* logo pink */
       padding: 6px 14px; border-radius: 6px; line-height: 21px;
     }
     #mute, #info { cursor: pointer; font-size: 15px; padding: 6px 10px; }
+    /* the one word each instruction pill is actually about */
+    .key { color: var(--accent); }
+    /* current score leads, then a white divider, then the high score in purple.
+       The bar is a pseudo-element so it keeps the white regardless of the
+       purple it separates. */
+    #hiscore { color: var(--accent); }
+    #hiscore::before { content: "|"; color: #fff; margin: 0 10px; }
     #help {
-      background: rgba(247, 105, 173, 0.85); color: #fff; border: 2px solid #fff; border-radius: 8px;
-      font-family: monospace; font-size: 19px; font-weight: bold; padding: 0; line-height: 2;
+      background: #f769ad; color: #fff; border: 2px solid #fff; border-radius: 8px;
+      /* 17px matches the in-game instruction pills (#msg / #rot) */
+      font-family: monospace; font-size: 17px; font-weight: bold; padding: 0; line-height: 2;
       outline: none;
       /* bottom-aligned with a gap: the UA's `margin: auto` still centres it
          horizontally, and `margin-top` stays auto so it's pushed all the way down */
@@ -177,9 +200,31 @@
     /* death-mode extras inside the help dialog (hidden until you die) */
     /* -10px right cancels #hbody's asymmetric padding (40 right for the ✕ vs 30
        left), so these two centre on the card rather than 5px off to the left */
-    #gameover:not([hidden]) {
-      display: block; font-size: 20px; margin: 0 -10px 10px 0; text-align: center;
+    /* Death header: the shark's fish-orbit loop on a white glow, then
+       GAME OVER and the score on one row beneath it.
+       `left: 5px` on both cancels #hbody's asymmetric padding (40 right for
+       the ✕ vs 30 left), which a shrink-to-fit box can't express as a
+       negative margin the way the full-width rows below do. */
+    /* opaque, so the pink card doesn't bleed through behind the shark */
+    #deadart:not([hidden]) {
+      display: flex; align-items: center; justify-content: center;
+      width: 118px; height: 118px; border-radius: 50%;
+      margin: 0 auto 8px; position: relative; left: 5px;
+      background: rgb(82, 182, 255);
+      border: 2px solid #fff;
     }
+    /* cell is exactly 93px at this height (sheet is 1302x150), so the loop
+       reuses a-deadloop's pixel keyframes as-is */
+    .deadico {
+      display: block; width: 93px; height: 75px;
+      background: url(img/sharkdead.webp) no-repeat; background-size: auto 100%;
+      animation: a-deadloop .39s steps(3) infinite;
+    }
+    /* plain text, same treatment as the other centred rows */
+    #dhead:not([hidden]) { display: block; margin: 0 -10px 10px 0; text-align: center; }
+    /* headings and calls-to-action in the shark's purple; "— SCORE 00000"
+       inherits the card's white so the number and its label read together */
+    #gameover, #retry, .lbl, #hbody .obs { color: var(--accent); }
     /* plain text, not a control — inherits the dialog's font/colour.
        The whole dialog body is the hit target instead (see hbody click handler). */
     #retry:not([hidden]) { display: block; margin: 16px -10px 0 0; text-align: center; }
@@ -199,14 +244,35 @@
     #msg:empty + #rot { display: none; }
     #msg:empty { display: none; }
 
-    /* phones: tighter padding, smaller logo bleed, strip + HUD scaled to fit */
+    /* --- strip scaling ---
+       The strip is a fixed 250px tall, which is fine on a desktop but eats
+       82% of a real landscape phone (measured 805x304 once the URL bar takes
+       its cut), leaving 54px for a header+HUD that need ~133.
+
+       So it gets scaled rather than resized: --k drives transform: scale()
+       with a matching 1/k width, so the strip's INTERNAL coordinate system
+       stays exactly 250 tall with the waterline at 90. WATER, GRAV, JUMP_V
+       and every hitbox are expressed in those coordinates and are untouched.
+       Breakpoints are set so 250*k still leaves ~133px above the strip. */
+    @media (max-width: 700px)                              { :root { --k: .80 } }
+    @media (orientation: landscape) and (max-height: 500px) { :root { --k: .75 } }
+    @media (orientation: landscape) and (max-height: 330px) { :root { --k: .60 } }
+    @media (orientation: landscape) and (max-height: 290px) { :root { --k: .50 } }
+    /* applied only where a scale is actually set, so desktop keeps no
+       transform on #game at all */
+    @media (max-width: 700px), (orientation: landscape) and (max-height: 500px) {
+      #game {
+        width: calc(100vw / var(--k)); right: auto;
+        transform: scale(var(--k)); transform-origin: bottom left;
+      }
+      #hud { bottom: calc(250px * var(--k)); }
+    }
+
+    /* phones: tighter padding, smaller logo bleed */
     @media (max-width: 700px) {
       body { padding: 24px 24px 300px; gap: 24px; grid-template-columns: 1fr; }
       main { margin-top: 48px; }
       img { --lw: max(135px, min(75vw, 682px, calc((100vh - 350px) * 1.13))); }
-      /* shrink the whole strip 20% for visibility; 125vw x 0.8 = full width */
-      #game { width: 125vw; right: auto; transform: scale(0.8); transform-origin: bottom left; }
-      #hud { bottom: 200px; } /* strip renders 250 x 0.8 = 200px tall here */
     }
 
     /* portrait phones only: real hardware that can actually be rotated.
@@ -230,6 +296,8 @@
       #hud { gap: 3px; padding-bottom: 6px; }
       #song, #art { font-size: 10px; }
       #score, #mute, #info { font-size: 13px; padding: 4px 8px; line-height: 16px; }
+      /* the CODEX button is the tallest thing in the header row */
+      main a { padding: 5px 12px; font-size: 13px; }
       img { --lw: max(110px, min(46vh, 40vw)); }
     }
   </style>
@@ -246,7 +314,7 @@
     <a id="art" href="https://www.instagram.com/pelykhyul/" target="_blank" rel="noopener">✎ Artwork by @pelykhyul</a>
     <a id="song" href="https://www.newgrounds.com/audio/listen/1459250" target="_blank" rel="noopener">♪ Sea Shanty 2 (OSRS Remix) — JizzyJazz</a>
     <div>
-      <span id="score"></span>
+      <span id="score"><span id="cur"></span><span id="hiscore"></span></span>
       <span id="mute">🔊</span>
       <span id="info">ℹ️</span>
     </div>
@@ -258,8 +326,9 @@
     <dialog id="help">
       <div id="hbody">
         <button id="hx">✕</button>
-        <b id="gameover" hidden>💀 GAME OVER</b>
-        <b>CONTROLS</b><br>
+        <div id="deadart" hidden><i class="deadico"></i></div>
+        <b id="dhead" hidden><span id="gameover">GAME OVER</span> — SCORE <span id="dscore"></span></b>
+        <b class="lbl">CONTROLS</b><br>
         ↑ / SPACE / TAP / SWIPE ↑ — Jump<br>
         ↓ / SWIPE ↓ — Dive<br>
         <a class="obs" href="?hitbox" title="show hitboxes">OBSTACLES</a><br>
@@ -268,8 +337,8 @@
         <div id="retry" hidden>JUMP TO RESTART</div>
       </div>
     </dialog>
-    <span id="msg">↑ / tap to play</span>
-    <span id="rot">↻ ROTATE FOR MORE ROOM</span>
+    <span id="msg">↑ / tap to <span class="key">play</span></span>
+    <span id="rot">↻ <span class="key">ROTATE</span> FOR MORE ROOM</span>
     <audio id="bgm" src="bgm.mp3" loop preload="none"></audio>
   </div>
 
@@ -278,7 +347,8 @@
     // (px, positive = airborne, negative = submerged). Waterline = top of #water.
     const WATER = 90, DIVE_Y = -48;
     const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
-          scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg'),
+          curEl = document.getElementById('cur'), hiEl = document.getElementById('hiscore'),
+          msgEl = document.getElementById('msg'),
           bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute');
     const W = () => game.clientWidth; // strip's coordinate width (125vw when scaled on phones)
     // narrow screens: hug the left edge for maximum reaction time
@@ -291,10 +361,13 @@
       muteEl.textContent = bgm.muted ? '🔇' : '🔊';
     });
     const helpEl = document.getElementById('help'), infoEl = document.getElementById('info'),
-          retryEl = document.getElementById('retry'), gameoverEl = document.getElementById('gameover');
+          retryEl = document.getElementById('retry'), dscoreEl = document.getElementById('dscore'),
+          deadartEl = document.getElementById('deadart'), dheadEl = document.getElementById('dhead');
     // same dialog serves both roles: info (controls only) and death (adds GAME OVER + retry)
     function openHelp(death) {
-      retryEl.hidden = gameoverEl.hidden = !death;
+      retryEl.hidden = deadartEl.hidden = dheadEl.hidden = !death;
+      // just the run's score, padded like the HUD's second number
+      if (death) dscoreEl.textContent = String(score | 0).padStart(5, '0');
       if (!helpEl.open) helpEl.showModal(); // showModal throws if already open (info up when you die)
     }
     infoEl.addEventListener('click', () => openHelp(false));
@@ -373,6 +446,7 @@
 
     function start() {
       if (state === 'dead' || state === 'idle') {
+        clearTimeout(deathTimer);
         obstacles.forEach(o => o.el.remove());
         obstacles = []; score = 0; y = 0; vy = 0; diving = false; state = 'run';
         msgEl.textContent = ''; setShark('');
@@ -430,18 +504,23 @@
     ], 0.3, 0, 0.55);
     // birds share the sky layer but fly, so they cross 3x faster than the clouds drift
     seedDecor([['bird', 24, 185], ['bird', 20, 205]], 0.9, 0, 0.55);
-    seedDecor([ // seabed + swimmers, in front of everything
+    seedDecor([ // seabed + swimmers: behind the water, so they read as submerged
       ['coral', 48, -14], ['coral', 38, -10], ['coral', 44, -16], ['coral', 36, -8],
       ['fish', 24, 30], ['fish2', 26, 12], ['fish', 22, 44], ['fish2', 20, 20],
-    ], 1.5, 3);
+    ], 1.5, 0);
     decor.forEach(d => { d.el.style.left = d.x + 'px'; });
 
+    let deathTimer = 0;
     function die() {
       state = 'dead';
       hi = Math.max(hi, score); localStorage.sharkHi = hi;
       msgEl.textContent = 'GAME OVER — ↑ to restart'; // shown if the modal is dismissed
       bgm.pause();
-      openHelp(true);
+      // hold the dialog back until the shark has finished flipping, so the
+      // flip and the first fish orbit aren't covered. The state check matters:
+      // ↑ during this window restarts, and the dialog must not then open over
+      // a live game.
+      deathTimer = setTimeout(() => { if (state === 'dead') openHelp(true); }, 520);
     }
 
     function tick() {
@@ -495,7 +574,8 @@
       else if (y < -2) setShark('surf');
       else setShark('');
       placeShark();
-      scoreEl.textContent = 'HI ' + String(hi | 0).padStart(5, '0') + '  ' + String(score | 0).padStart(5, '0');
+      curEl.textContent = String(score | 0).padStart(5, '0');
+      hiEl.textContent = String(hi | 0).padStart(5, '0');
       requestAnimationFrame(tick);
     }
 
