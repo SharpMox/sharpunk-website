@@ -72,9 +72,79 @@
       border-top: 2px solid rgba(160, 215, 255, 0.6);
       z-index: 1;
     }
-    #game .sprite { position: absolute; font-size: 40px; line-height: 1; z-index: 2; }
-    #game .decor { position: absolute; line-height: 1; pointer-events: none; }
-    #shark { transform: scaleX(-1); } /* emoji faces left; flip to swim right */
+    /* --- sprites (sheets are @2x, sized here in logical px) ---
+       Animated sheets are horizontal strips of equal cells. `background-size:
+       auto 100%` makes one cell exactly the element's width, so the keyframes
+       just walk background-position-x by whole cells.
+       steps(n, jump-none) is deliberate: it lands on both the FIRST and LAST
+       cell, so `forwards` holds the real final frame. Plain steps() would
+       finish one cell past the end of the strip (i.e. on nothing). */
+    /* longhands, not the `background` shorthand: this rule outranks the
+       per-asset .island/.cloud/... classes, and the shorthand would reset
+       their background-image back to none */
+    #game .sprite, #game .decor, #game .part {
+      position: absolute;
+      background-repeat: no-repeat; background-position: 0 0; background-size: 100% 100%;
+    }
+    #game .decor { pointer-events: none; }
+    #game .sprite { z-index: 2; }
+    #game .pile { width: 0; height: 0; }   /* zero-size anchor; parts hang off it */
+
+    /* #game prefix needed: the shared `.sprite`/`.decor` rule above is (1,1,0)
+       and would otherwise win, squashing the whole strip into one cell */
+    #game #shark {
+      width: 93px; height: 75px;
+      background-image: url(img/sharkswim.webp); background-size: auto 100%;
+      transform: scaleX(-1);               /* art faces left; flip to swim right */
+      animation: swim .34s steps(2) infinite;
+    }
+    /* must also carry the #game prefix, or the base rule above outranks them */
+    #game #shark.jump { background-image: url(img/sharkjump.webp); animation: a-jump .73s steps(9, jump-none) forwards; }
+    #game #shark.dive { background-image: url(img/sharkdive.webp); animation: a-dive .2s  steps(5, jump-none) forwards; }
+    #game #shark.surf { background-image: url(img/sharkdive.webp); animation: a-surf .15s steps(3, jump-none) forwards; }
+    #game #shark.dead { background-image: url(img/sharkdead.webp); animation: a-dead .5s  steps(4, jump-none) forwards; }
+    /* cell = 93px; dive is one 8-frame arc split into descend (f0-f4) and surface (f5-f7) */
+    @keyframes swim   { to { background-position-x: -186px } }
+    @keyframes a-jump { to { background-position-x: -744px } }
+    @keyframes a-dive { to { background-position-x: -372px } }
+    @keyframes a-surf { from { background-position-x: -465px } to { background-position-x: -651px } }
+    @keyframes a-dead { to { background-position-x: -279px } }
+
+    /* bird renders at two sizes, so its cell width varies — carry it in --cw */
+    #game .bird { background-image: url(img/bird.webp); background-size: auto 100%;
+                  animation: fly 1.2s steps(3) infinite; }
+    @keyframes fly { to { background-position-x: calc(var(--cw) * -3) } }
+
+    .island { background-image: url(img/island.webp) }
+    .cloud  { background-image: url(img/cloud.webp) }
+    .cloud2 { background-image: url(img/cloud2.webp) }
+    .cloud3 { background-image: url(img/cloud3.webp) }
+    .coral  { background-image: url(img/coral.webp) }
+    .fish   { background-image: url(img/fish.webp); transform: scaleX(-1) }
+    .fish2  { background-image: url(img/fish2.webp) }
+    /* drawn bow-left; flipped so it sails into the oncoming shark */
+    .boat   { background-image: url(img/boat.webp); transform: scaleX(-1) }
+    .rock   { background-image: url(img/rock.webp) }
+    .rock2  { background-image: url(img/rock2.webp) }
+    /* obstacle art inline in the modal, so the instructions show the real thing */
+    /* ?hitbox overlay only */
+    .dbg { position: absolute; pointer-events: none; outline: 2px dashed rgba(255,255,255,.85); }
+    .dbg.box { outline-style: solid; outline-width: 3px; }
+    .dbg::after {
+      content: attr(data-l); position: absolute; top: 2px; left: 4px;
+      font: bold 12px/1.4 monospace; color: #fff; white-space: pre;
+      background: rgba(0,0,0,.75); padding: 1px 4px; border-radius: 3px;
+    }
+    #dbgbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9;
+      background: #c0143c; color: #fff; font: bold 13px monospace;
+      padding: 4px 10px; letter-spacing: .1em;
+    }
+    /* reads as the <b> heading it replaced; the icons beside it link to ?hitbox too */
+    #hbody .obs { color: inherit; font-weight: bold; text-decoration: none; }
+    #hbody .obs:hover { text-decoration: underline; }
+    .ico { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.35em;
+           background-repeat: no-repeat; background-position: center; background-size: contain; }
     /* HUD lives outside #game so it clears the strip's clouds — and so it
        escapes the 0.8 phone scale and stays full size. Credit on its own
        line, pills right-aligned beneath it. */
@@ -114,12 +184,12 @@
        The whole dialog body is the hit target instead (see hbody click handler). */
     #retry:not([hidden]) { display: block; margin: 16px -10px 0 0; text-align: center; }
     #help::backdrop { background: rgba(8, 6, 15, 0.6); }
-    #song {
+    #song, #art {
       font-family: monospace; font-size: 12px; color: #fff;
       text-decoration: none;
       max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    #song:hover { text-decoration: underline; }
+    #song:hover, #art:hover { text-decoration: underline; }
     /* raised into the space the HUD row used to occupy */
     #msg { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); text-transform: uppercase; }
     /* portrait-phone hint; off everywhere else, switched on in the media query below.
@@ -131,7 +201,7 @@
 
     /* phones: tighter padding, smaller logo bleed, strip + HUD scaled to fit */
     @media (max-width: 700px) {
-      body { padding: 24px 24px 280px; gap: 24px; grid-template-columns: 1fr; }
+      body { padding: 24px 24px 300px; gap: 24px; grid-template-columns: 1fr; }
       main { margin-top: 48px; }
       img { --lw: max(135px, min(75vw, 682px, calc((100vh - 350px) * 1.13))); }
       /* shrink the whole strip 20% for visibility; 125vw x 0.8 = full width */
@@ -155,6 +225,11 @@
              justify-content: flex-end; flex-wrap: wrap; gap: 6px 20px; }
       main h1, main a { margin: 0; }
       h1 { font-size: min(7vw, 8vh); -webkit-text-stroke-width: 4px; }
+      /* only ~140px above the strip here; compact the HUD so the two credit
+         lines stop colliding with the header row */
+      #hud { gap: 3px; padding-bottom: 6px; }
+      #song, #art { font-size: 10px; }
+      #score, #mute, #info { font-size: 13px; padding: 4px 8px; line-height: 16px; }
       img { --lw: max(110px, min(46vh, 40vw)); }
     }
   </style>
@@ -168,6 +243,7 @@
   <img src="logo.svg" alt="Sharpunk logo">
 
   <div id="hud">
+    <a id="art" href="https://www.instagram.com/pelykhyul/" target="_blank" rel="noopener">✎ Artwork by @pelykhyul</a>
     <a id="song" href="https://www.newgrounds.com/audio/listen/1459250" target="_blank" rel="noopener">♪ Sea Shanty 2 (OSRS Remix) — JizzyJazz</a>
     <div>
       <span id="score"></span>
@@ -178,7 +254,7 @@
 
   <div id="game">
     <div id="water"></div>
-    <span id="shark" class="sprite">🦈</span>
+    <span id="shark" class="sprite"></span>
     <dialog id="help">
       <div id="hbody">
         <button id="hx">✕</button>
@@ -186,9 +262,9 @@
         <b>CONTROLS</b><br>
         ↑ / SPACE / TAP / SWIPE ↑ — Jump<br>
         ↓ / SWIPE ↓ — Dive<br>
-        <b>OBSTACLES</b><br>
-        ⛵ Dive under the boats<br>
-        🪨 Jump over the rocks
+        <a class="obs" href="?hitbox" title="show hitboxes">OBSTACLES</a><br>
+        <a class="ico boat" href="?hitbox" title="show hitboxes"></a> Dive under the boats<br>
+        <a class="ico rock" href="?hitbox" title="show hitboxes"></a> Jump over the rocks
         <div id="retry" hidden>JUMP TO RESTART</div>
       </div>
     </dialog>
@@ -225,7 +301,8 @@
     // in death mode a tap/click anywhere in the dialog body counts as the jump;
     // ✕ has its own handler and must only close
     document.getElementById('hbody').addEventListener('click', e => {
-      if (!retryEl.hidden && e.target.id !== 'hx') { helpEl.close(); start(); }
+      // links (the obstacle icons open ?hitbox) must navigate, not restart
+      if (!retryEl.hidden && e.target.id !== 'hx' && !e.target.closest('a')) { helpEl.close(); start(); }
     });
     // clicks on the backdrop (outside #hbody) target the dialog itself
     helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.close(); });
@@ -234,13 +311,59 @@
     let state = 'idle', y = 0, vy = 0, diving = false;
     let score = 0, hi = +localStorage.sharkHi || 0, t = 0, obstacles = [];
 
+    // Hitboxes, as plain boxes. Shark's are relative to SHARK_X and its centre
+    // y; each obstacle's are relative to its own x and the waterline. y grows
+    // upward, so y1 is a box's top edge.
+    //
+    // All are deliberately tighter than the art. The shark sprite is 93x75
+    // where the old emoji glyph was ~40 square, and a true-to-art box kept an
+    // obstacle lethal for ~152px instead of ~115 — long enough that at
+    // mobile's 0.75x speed the shark landed or surfaced before clearing it.
+    //
+    // The rock is two boxes because it's a spike: a narrow tip above the
+    // surface, over a wider body below it. One box around the whole pile
+    // would kill you for passing beside the point.
+    //
+    // Load with ?hitbox to see these drawn, and tweak live from the console:
+    //   HIT.shark.x1 = 70        // takes effect on the next frame
+    const HIT = {
+      shark: { x0: 18, x1: 76, y0: -15, y1: 15 },
+      boat: [{ x0: 12, x1: 85, y0: -5, y1: 115 }],   // hull to masthead
+      rock: [{ x0: 18, x1: 45, y0:  0, y1:  22 },    // tip, above water
+             { x0:  8, x1: 58, y0: -60, y1:  0 }],   // body, submerged
+    };
+
     // ponytail: frame-based physics like the original T-rex — no dt scaling,
     // assumes ~60fps; switch to dt if high-refresh screens feel too fast
     const GRAV = 0.5, JUMP_V = 11, BASE_SPEED = 6;
 
-    function place(el, x, cy) { // cy = sprite center relative to waterline
-      el.style.left = x + 'px';
-      el.style.bottom = (WATER + cy - 20) + 'px';
+    // natural width/height ratio of each sprite sheet, from tools/build-assets.py
+    const ASPECT = { island: 0.633, cloud: 2.188, cloud2: 1.438, cloud3: 1.979, bird: 1.458,
+                     coral: 0.813, fish: 1.583, fish2: 1.808, boat: 0.808, rock: 0.573, rock2: 0.445 };
+    function sprite(cls, h, kind) {
+      const el = document.createElement('span');
+      el.className = kind + ' ' + cls;
+      const w = Math.round(h * ASPECT[cls]);
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+      if (cls === 'bird') el.style.setProperty('--cw', w + 'px'); // cell width for @keyframes fly
+      return el;
+    }
+
+    // the shark is the only thing that moves vertically, so it's the only
+    // thing that needs repositioning on both axes each frame
+    const SHARK_H = 75;
+    function placeShark() {
+      sharkEl.style.left = SHARK_X + 'px';
+      sharkEl.style.bottom = (WATER + y - SHARK_H / 2) + 'px';
+    }
+
+    // class swap drives the CSS animations; only write it on an actual change,
+    // otherwise every frame restarts the animation from frame 0
+    let sharkState = '';
+    function setShark(s) {
+      if (s !== sharkState) sharkEl.className = 'sprite' + (s ? ' ' + s : '');
+      sharkState = s;
     }
 
     function jump() {
@@ -252,30 +375,37 @@
       if (state === 'dead' || state === 'idle') {
         obstacles.forEach(o => o.el.remove());
         obstacles = []; score = 0; y = 0; vy = 0; diving = false; state = 'run';
-        msgEl.textContent = ''; sharkEl.textContent = '🦈';
+        msgEl.textContent = ''; setShark('');
         bgm.volume = 0.1; bgm.play(); // low volume; started from a user gesture
       }
     }
 
     function spawn() {
       const boat = Math.random() < 0.5;
-      const el = document.createElement('span');
-      el.className = 'sprite';
+      let el;
       if (boat) {
-        el.textContent = '⛵';
-        el.style.fontSize = '100px';
+        // sailboat floats with its hull just under the waterline — dive beneath it
+        el = sprite('boat', 120, 'sprite');
+        el.style.bottom = (WATER - 5) + 'px';
       } else {
         // main rock breaking the surface + smaller rocks piled beneath it,
-        // overflowing past the bottom of the strip
-        el.innerHTML =
-          '<span style="position:absolute;bottom:0;left:0;font-size:110px">🪨</span>' +
-          '<span style="position:absolute;bottom:-35px;left:-30px;font-size:80px">🪨</span>' +
-          '<span style="position:absolute;bottom:-50px;left:40px;font-size:90px">🪨</span>';
+        // overflowing past the bottom of the strip — jump over it
+        el = document.createElement('span');
+        el.className = 'sprite pile';
+        el.style.bottom = '0px';
+        // top rock is the one that breaks the surface — its size and position
+        // are load-bearing for the hitbox, so only the two below it changed
+        for (const [c, h, b, l] of [['rock', 110, 0, 0], ['rock2', 100, -32, -20], ['rock', 110, -45, 28]]) {
+          const r = sprite(c, h, 'part');
+          r.style.bottom = b + 'px';
+          r.style.left = l + 'px';
+          el.appendChild(r);
+        }
       }
       game.appendChild(el);
-      // sailboat floats with its hull right on the waterline (dive under it);
-      // rock pile is mostly submerged, tip above the surface (jump over it)
-      obstacles.push({ el, x: W() + 40, cy: boat ? 12 : -70, boat });
+      // vertical position never changes, so it's set once here and only
+      // `left` is touched per frame
+      obstacles.push({ el, x: W() + 40, boat });
     }
 
     // parallax decor: seeded once, recycled by wrapping — no spawn/despawn.
@@ -283,35 +413,32 @@
     // fg (coral/fish) at 1.5x in front of the game sprites.
     const decor = [];
     function seedDecor(defs, mult, z, opacity) {
-      for (const [emoji, size, bottom] of defs) {
-        const el = document.createElement('span');
-        el.className = 'decor';
-        el.textContent = emoji;
-        el.style.fontSize = size + 'px';
+      for (const [cls, size, bottom] of defs) {
+        const el = sprite(cls, size, 'decor');
         el.style.bottom = bottom + 'px';
         el.style.zIndex = z;
         if (opacity) el.style.opacity = opacity;
         game.appendChild(el);
         // clouds, birds and fish keep drifting while the game is paused; islands and coral don't
-        const ambient = ['☁️', '🕊️', '🐟', '🐠', '🐡'].includes(emoji);
+        const ambient = ['cloud', 'cloud2', 'cloud3', 'bird', 'fish', 'fish2'].includes(cls);
         decor.push({ el, x: Math.random() * W(), mult, ambient });
       }
     }
     seedDecor([ // sky + horizon, behind the water
-      ['🏝️', 60, WATER - 10], ['🏝️', 44, WATER - 6],
-      ['☁️', 48, 190], ['☁️', 36, 210], ['☁️', 42, 170],
-      ['🕊️', 24, 185], ['🕊️', 20, 205],
+      ['island', 60, WATER - 10], ['island', 44, WATER - 6],
+      ['cloud', 48, 190], ['cloud2', 36, 210], ['cloud3', 42, 170],
     ], 0.3, 0, 0.55);
+    // birds share the sky layer but fly, so they cross 3x faster than the clouds drift
+    seedDecor([['bird', 24, 185], ['bird', 20, 205]], 0.9, 0, 0.55);
     seedDecor([ // seabed + swimmers, in front of everything
-      ['🪸', 48, -14], ['🪸', 38, -10], ['🪸', 44, -16], ['🪸', 36, -8],
-      ['🐟', 24, 30], ['🐠', 26, 12], ['🐡', 22, 44], ['🐟', 20, 20],
+      ['coral', 48, -14], ['coral', 38, -10], ['coral', 44, -16], ['coral', 36, -8],
+      ['fish', 24, 30], ['fish2', 26, 12], ['fish', 22, 44], ['fish2', 20, 20],
     ], 1.5, 3);
     decor.forEach(d => { d.el.style.left = d.x + 'px'; });
 
     function die() {
       state = 'dead';
       hi = Math.max(hi, score); localStorage.sharkHi = hi;
-      sharkEl.textContent = '💀';
       msgEl.textContent = 'GAME OVER — ↑ to restart'; // shown if the modal is dismissed
       bgm.pause();
       openHelp(true);
@@ -331,13 +458,16 @@
         const last = obstacles[obstacles.length - 1];
         if (!last || last.x < W() - (300 + Math.random() * 400 + speed * 40)) spawn();
 
+        // sail reaches all the way up (jumping always clips it); rock reaches
+        // all the way down (diving always hits it) — each has exactly one escape
+        const sx0 = SHARK_X + HIT.shark.x0, sx1 = SHARK_X + HIT.shark.x1,
+              sy0 = y + HIT.shark.y0,       sy1 = y + HIT.shark.y1;
         for (const o of obstacles) {
           o.x -= speed;
-          place(o.el, o.x, o.cy);
-          // sail reaches all the way up (jumping always clips it); rock reaches all
-          // the way down (diving always hits it) — each has exactly one escape
-          const d = o.x - SHARK_X; // hitboxes trimmed to the visible glyph, not the em box
-          if (o.boat ? (d > -85 && d < 30 && y > -26) : (d > -85 && d < 28 && y < 34)) die();
+          o.el.style.left = o.x + 'px'; // vertical position was fixed at spawn
+          for (const b of (o.boat ? HIT.boat : HIT.rock)) {
+            if (o.x + b.x0 < sx1 && o.x + b.x1 > sx0 && b.y0 < sy1 && b.y1 > sy0) { die(); break; }
+          }
         }
         obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
 
@@ -355,7 +485,16 @@
         }
         if (state === 'idle') y = Math.sin(t / 20) * 4; // idle bob
       }
-      place(sharkEl, SHARK_X, y);
+      // pick the pose. `surf` covers the rise back to the surface after a dive:
+      // y eases toward 0 by 0.3/frame, so it clears -2 in ~9 frames (~150ms),
+      // which is what the .15s surface animation is timed to.
+      if (state === 'dead') setShark('dead');
+      else if (state !== 'run') setShark('');       // idle bob keeps swimming
+      else if (y > 0 || vy > 0) setShark('jump');
+      else if (diving) setShark('dive');
+      else if (y < -2) setShark('surf');
+      else setShark('');
+      placeShark();
       scoreEl.textContent = 'HI ' + String(hi | 0).padStart(5, '0') + '  ' + String(score | 0).padStart(5, '0');
       requestAnimationFrame(tick);
     }
@@ -390,6 +529,112 @@
       if (dy < -SWIPE) { if (diving) diving = false; else jump(); }      // swipe up
       else if (dy > SWIPE) { diving = true; if (state !== 'run') start(); } // swipe down
       else jump();                                                        // tap
+    });
+
+    // ?hitbox — draw the collision zones so they can be tuned by eye.
+    // Redrawn every frame from HIT, so console tweaks show up immediately.
+    if (location.search.includes('hitbox')) {
+      const mk = (bg, label, z, outline) => {
+        const d = document.createElement('div');
+        d.className = 'dbg' + (outline ? ' box' : ''); d.dataset.l = label;
+        d.style.background = bg; d.style.zIndex = z || 5;
+        if (outline) d.style.outlineColor = outline;
+        game.appendChild(d); return d;
+      };
+      const bar = document.createElement('div');
+      bar.id = 'dbgbar';
+      bar.textContent = 'HITBOX DEBUG — solid = hitbox, dashed = sprite bounds. Console: HIT.shark.x1 = 70';
+      document.body.appendChild(bar);
+
+      // dashed = where the ART is, solid = what actually kills
+      const sSprite = mk('transparent', 'sprite 93x75', 7),
+            sHit    = mk('rgba(255,224,0,.22)', 'SHARK hitbox', 8, '#ffe000'),
+            hud     = mk('rgba(0,0,0,.8)', '', 9);
+      hud.style.cssText += ';left:8px;bottom:8px;width:250px;height:70px;outline:none';
+      const marks = [];
+      const set = (el, l, w, b, h) => {
+        el.style.left = l + 'px'; el.style.width = w + 'px';
+        el.style.bottom = b + 'px'; el.style.height = h + 'px';
+      };
+      (function draw() {
+        const s = HIT.shark;
+        set(sSprite, SHARK_X, 93, WATER + y - SHARK_H / 2, SHARK_H);
+        set(sHit, SHARK_X + s.x0, s.x1 - s.x0, WATER + y + s.y0, s.y1 - s.y0);
+        // Boxes live in #game, not inside the obstacles: .boat is scaleX(-1)
+        // and would mirror a child onto the wrong edge.
+        let n = 0;
+        obstacles.forEach(o => {
+          const boxes = o.boat ? HIT.boat : HIT.rock;
+          const colour = o.boat ? '#ff3b3b' : '#37a6ff';
+          boxes.forEach((b, j) => {
+            let el = marks[n];
+            if (!el) el = marks[n] = mk('transparent', '', 8, '#fff');
+            el.style.display = ''; el.style.outlineColor = colour;
+            set(el, o.x + b.x0, b.x1 - b.x0, WATER + b.y0, b.y1 - b.y0);
+            el.dataset.l = j ? '' : (o.boat ? 'BOAT' : 'ROCK') + ' d ' + ((o.x - SHARK_X) | 0);
+            n++;
+          });
+          let e = marks[n];
+          if (!e) e = marks[n] = mk('rgba(255,255,255,.5)', '', 8);
+          e.style.display = ''; set(e, o.x, 1, 0, 250);   // o.x, what d measures from
+          n++;
+        });
+        for (let i = n; i < marks.length; i++) marks[i].style.display = 'none';
+
+        const o = obstacles[0];
+        hud.dataset.l =
+          `y ${y | 0}   d ${o ? (o.x - SHARK_X) | 0 : '—'}\n` +
+          `shark x ${s.x0}..${s.x1}  y ${s.y0}..${s.y1}\n` +
+          `boat  x ${HIT.boat[0].x0}..${HIT.boat[0].x1}  y ${HIT.boat[0].y0}..${HIT.boat[0].y1}\n` +
+          `rock  tip x ${HIT.rock[0].x0}..${HIT.rock[0].x1}  y ${HIT.rock[0].y0}..${HIT.rock[0].y1}`;
+        requestAnimationFrame(draw);
+      })();
+    }
+
+    // console calling card — the logo, region-mapped from
+    // SHARPUNK/IMGS/Sharpunk Vector Color.svg.
+    // Deliberately no '%' in the art: console.log reads it as a format
+    // specifier, so '%%' would collapse and '%c' would eat a style argument.
+    console.log(`%c
+                             ######
+                        @###########@  @+
+                  #################@@  @+@
+              #######################@@+@
+           ###########################
+        @##############********@***###
+       #############**********..***@##@
+     @###########**@@********.....@**#@
+    @##########****..******.......***@
+    #########..***....***.........***@
+   #########...............*........@
+   #######@...**........*****......@
+  @#######..*****@@*++++++++*@**..@
+ @#######@.****++++++++++++++++@@@
+@########@+++++++++++++++++++++@@
+#########++++++++++++++++++++@#@
+#########@++++++++++++++++@@##@
+ #########+++++++++++++++@@@##@
+  #########++++++++++++++@#####
+   @### ####@+++++++++++++######
+      @@  ####+++++++++++++#######           @
+             ####++++++++++++##############@
+                 ##@@@+++++++++@@ #######
+
+        S H A R P U N K   ·   WEB & GAMES
+`, 'color:#a2d741');
+    console.log(
+      '%cArtwork%c  @pelykhyul — instagram.com/pelykhyul\n' +
+      '%cMusic%c    Sea Shanty 2 (OSRS Remix) — JizzyJazz\n' +
+      '%cHitboxes%c add ?hitbox to the URL to see the collision boxes',
+      'color:#f769ad;font-weight:bold', 'color:inherit',
+      'color:#f769ad;font-weight:bold', 'color:inherit',
+      'color:#f769ad;font-weight:bold', 'color:inherit');
+
+    // Sheets only reachable once a run starts: kept off the first-paint path,
+    // then warmed after load so the first jump/dive/death doesn't pop in.
+    addEventListener('load', () => {
+      for (const n of ['sharkjump', 'sharkdive', 'sharkdead', 'boat', 'rock', 'rock2'])
+        new Image().src = 'img/' + n + '.webp';
     });
 
     tick();
