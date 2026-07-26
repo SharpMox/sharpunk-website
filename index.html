@@ -89,10 +89,10 @@
     }
     #game .decor { pointer-events: none; }
     #game .sprite { z-index: 2; }
-    /* zero-size anchor; parts hang off it. Behind the water (z0) so the
-       submerged bulk tints blue like the seabed — the tip above the
-       waterline is unaffected, since #water only covers the bottom 90px. */
-    #game .pile { width: 0; height: 0; z-index: 0; }
+    /* zero-size anchor; parts hang off it. Same z as #water but appended
+       later, so the whole pile paints in front of the blue box (rocks were
+       unreadable through the tint) yet stays under the shark (z2). */
+    #game .pile { width: 0; height: 0; z-index: 1; }
 
     /* #game prefix needed: the shared `.sprite`/`.decor` rule above is (1,1,0)
        and would otherwise win, squashing the whole strip into one cell */
