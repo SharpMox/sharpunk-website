@@ -253,7 +253,8 @@
                  height: fit-content; margin-top: 34px; z-index: 3; }
     #msg { text-transform: uppercase; }
     /* portrait-phone hint; off everywhere else, switched on in the media query below.
-       ponytail: no JS — #msg empties on start and refills on death, so the sibling
+       ponytail: no JS — #msg empties on start and refills when the death modal
+       is dismissed, so the sibling
        rule hides the hint for exactly the duration of a run */
     #rot { display: none; }
     #msg:empty + #rot { display: none; }
@@ -362,6 +363,7 @@
       </div>
     </dialog>
     <audio id="bgm" src="bgm.mp3" loop preload="none"></audio>
+    <audio id="oof" src="oof.mp3" preload="auto"></audio>
   </div>
   <!-- grid items overlaying the strip's area (adjacent: #msg:empty + #rot) -->
   <span id="msg">↑ / tap to <span class="key">play</span></span>
@@ -374,7 +376,8 @@
     const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
           curEl = document.getElementById('cur'), hiEl = document.getElementById('hiscore'),
           msgEl = document.getElementById('msg'),
-          bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute');
+          bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute'),
+          oof = document.getElementById('oof');
     const W = () => game.clientWidth; // strip's coordinate width (125vw when scaled on phones)
     // narrow screens: hug the left edge for maximum reaction time
     const sharkX = () => W() < 625 ? 20 : Math.min(200, W() * 0.25);
@@ -405,6 +408,12 @@
     // clicks on the backdrop (outside #hbody) target the dialog itself
     helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.close(); });
     document.getElementById('hx').addEventListener('click', () => helpEl.close());
+    // the restart pill only appears once the death modal is dismissed — filling
+    // it in die() flashed it under the flip before the modal opened. The close
+    // event fires after a retry's start() too, hence the state check.
+    helpEl.addEventListener('close', () => {
+      if (state === 'dead') msgEl.textContent = 'GAME OVER — ↑ to restart';
+    });
 
     let state = 'idle', y = 0, vy = 0, diving = false;
     let score = 0, hi = +localStorage.sharkHi || 0, t = 0, obstacles = [];
@@ -539,8 +548,8 @@
     function die() {
       state = 'dead';
       hi = Math.max(hi, score); localStorage.sharkHi = hi;
-      msgEl.textContent = 'GAME OVER — ↑ to restart'; // shown if the modal is dismissed
       bgm.pause();
+      oof.muted = bgm.muted; oof.currentTime = 0; oof.play();
       // hold the dialog back until the shark has finished flipping, so the
       // flip and the first fish orbit aren't covered. The state check matters:
       // ↑ during this window restarts, and the dialog must not then open over
