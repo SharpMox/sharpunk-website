@@ -7,34 +7,41 @@
   <meta name="description" content="Sharpunk — web & games studio. Play the shark runner while you're here.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <style>
-    :root { --accent: #5a1a8f; }   /* the shark's body purple, sampled from the art */
+    :root { --accent: #5a1a8f;     /* the shark's body purple, sampled from the art */
+            --k: 1; }              /* game strip scale, driven by the media queries below */
+    /* Single-screen app grid: one 100dvh frame, named areas per breakpoint,
+       nothing position:fixed. The strip row is the strip's SCALED height, so
+       the rows always sum to the viewport. overflow:clip because two items
+       deliberately overhang the frame: the logo's corner bleed and the
+       scaled strip's unscaled 100vw/k layout box. */
     body {
       margin: 0;
-      min-height: 100vh;
+      height: 100dvh;
+      overflow: clip;
       box-sizing: border-box;
       display: grid;
-      /* ponytail: rtl grid = first source item (text) fills the right column
-         when wide, top row when wrapped — no media query needed */
-      direction: rtl;
-      grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
-      align-items: start;
-      gap: 50px;
-      padding: 50px 50px 360px; /* room for the fixed game strip + the HUD above it */
+      grid-template-columns: auto 1fr;
+      grid-template-rows: auto 1fr auto calc(250px * var(--k));
+      grid-template-areas:
+        "logo main"
+        "logo ."
+        "hud  hud"
+        "game game";
       background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
       color: #f2f2f2;
       font-family: system-ui, sans-serif;
     }
-    body > * { direction: ltr; }
-    main { text-align: right; font-family: ui-monospace, monospace; min-width: 0; }
+    main { grid-area: main; text-align: right; font-family: ui-monospace, monospace;
+           min-width: 0; padding: 50px 50px 0 20px; }
     img {
-      /* out of the grid: pinned to the corner, bleeding off the top-left edge */
       /* height cap folded into width (art ratio 267.3:236.4 = 1.13) so the box
          always hugs the art — keeps the rotation axis on the art's center */
-      --lw: max(135px, min(88vw, 682px, calc((100vh - 350px) * 1.13)));
-      position: fixed; z-index: -1;
+      --lw: max(135px, min(88vw, 682px, calc((100dvh - 350px) * 1.13)));
+      grid-area: logo; z-index: -1;
       width: var(--lw);
-      /* bleed scales with the logo so it never vanishes off the corner */
-      top: calc(var(--lw) * -0.3); left: calc(var(--lw) * -0.3);
+      /* corner bleed as negative margins: the logo column's track sizes to
+         the visible 70%, and body's overflow:clip eats the rest */
+      margin: calc(var(--lw) * -0.3) 0 0 calc(var(--lw) * -0.3);
       animation: spin 240s linear infinite;
     }
     @keyframes spin { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
@@ -62,9 +69,13 @@
     main a { animation: float 7s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) { main a, img { animation: none; } }
 
-    /* shark game strip */
+    /* shark game strip — the one place absolute positioning survives: it's a
+       game canvas, sprites move per-frame in its 250px coordinate system.
+       The grid row is calc(250px * --k); this box stays 250 tall and, when
+       scaled, bottom-anchors so scale(--k) lands exactly on the row. */
     #game {
-      position: fixed; bottom: 0; left: 0; right: 0; height: 250px;
+      grid-area: game; align-self: end; justify-self: start;
+      position: relative; width: 100%; height: 250px;
       overflow: hidden; touch-action: none; user-select: none;
     }
     #water {
@@ -152,8 +163,9 @@
     }
     /* the readout IS its own panel — the chip would stack a second black box on it */
     #dbghud::after { background: none; padding: 0; top: 6px; left: 8px; }
+    /* JS appends it to body; explicit placement overlays it on the top row */
     #dbgbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 9;
+      grid-row: 1; grid-column: 1 / -1; align-self: start; z-index: 9;
       background: #c0143c; color: #fff; font: bold 13px monospace;
       padding: 4px 10px; letter-spacing: .1em;
     }
@@ -163,12 +175,12 @@
     .ico { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.35em;
            background-repeat: no-repeat; background-position: center; background-size: contain; }
     /* HUD lives outside #game so it clears the strip's clouds — and so it
-       escapes the 0.8 phone scale and stays full size. Credit on its own
+       escapes the phone scale and stays full size. Credit on its own
        line, pills right-aligned beneath it. */
     #hud {
-      position: fixed; right: 12px; bottom: 250px; z-index: 4;
+      grid-area: hud; justify-self: end; z-index: 4;
       display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
-      padding-bottom: 12px; max-width: calc(100vw - 24px);
+      margin: 0 12px 12px 0; max-width: calc(100vw - 24px);
     }
     #hud div { display: flex; gap: 8px; }
     #score, #msg, #mute, #info, #rot {
@@ -194,24 +206,22 @@
          horizontally, and `margin-top` stays auto so it's pushed all the way down */
       margin-bottom: 24px;
     }
-    #hbody { padding: 24px 40px 24px 30px; position: relative; }
+    /* flex column: ✕ row, death extras, the instruction block, retry row */
+    #hbody { padding: 24px 34px; display: flex; flex-direction: column; }
+    /* first flex row, tucked into the padding corner by negative margins */
     #hx {
-      position: absolute; top: 8px; right: 10px; cursor: pointer;
+      align-self: flex-end; margin: -16px -24px -4px 0; cursor: pointer;
       background: none; border: none; color: #fff; font: bold 18px monospace; outline: none;
     }
     /* death-mode extras inside the help dialog (hidden until you die) */
-    /* -10px right cancels #hbody's asymmetric padding (40 right for the ✕ vs 30
-       left), so these two centre on the card rather than 5px off to the left */
     /* Death header: the shark's fish-orbit loop on a white glow, then
-       GAME OVER and the score on one row beneath it.
-       `left: 5px` on both cancels #hbody's asymmetric padding (40 right for
-       the ✕ vs 30 left), which a shrink-to-fit box can't express as a
-       negative margin the way the full-width rows below do. */
+       GAME OVER and the score on one row beneath it. Padding is symmetric
+       now, so plain flex centering lands these on the card's true center. */
     /* opaque, so the pink card doesn't bleed through behind the shark */
     #deadart:not([hidden]) {
       display: flex; align-items: center; justify-content: center;
       width: 118px; height: 118px; border-radius: 50%;
-      margin: 0 auto 8px; position: relative; left: 5px;
+      align-self: center; margin: 0 0 8px;
       background: #4464a2;
       border: 2px solid #fff;
     }
@@ -223,13 +233,13 @@
       animation: a-deadloop .39s steps(3) infinite;
     }
     /* plain text, same treatment as the other centred rows */
-    #dhead:not([hidden]) { display: block; margin: 0 -10px 10px 0; text-align: center; }
+    #dhead:not([hidden]) { display: block; margin: 0 0 10px; text-align: center; }
     /* headings and calls-to-action in the shark's purple; "— SCORE 00000"
        inherits the card's white so the number and its label read together */
     #gameover, #retry, .lbl, #hbody .obs { color: var(--accent); }
     /* plain text, not a control — inherits the dialog's font/colour.
        The whole dialog body is the hit target instead (see hbody click handler). */
-    #retry:not([hidden]) { display: block; margin: 16px -10px 0 0; text-align: center; }
+    #retry:not([hidden]) { display: block; margin: 16px 0 0; text-align: center; }
     #help::backdrop { background: rgba(8, 6, 15, 0.6); }
     #song, #art {
       font-family: monospace; font-size: 12px; color: #fff;
@@ -237,12 +247,15 @@
       max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     #song:hover, #art:hover { text-decoration: underline; }
-    /* raised into the space the HUD row used to occupy */
-    #msg { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); text-transform: uppercase; }
+    /* the pills live OUTSIDE #game now: grid items sharing the strip's area,
+       centered by the grid — so they also escape the phone scale */
+    #msg, #rot { grid-area: game; justify-self: center; align-self: start;
+                 height: fit-content; margin-top: 34px; z-index: 3; }
+    #msg { text-transform: uppercase; }
     /* portrait-phone hint; off everywhere else, switched on in the media query below.
        ponytail: no JS — #msg empties on start and refills on death, so the sibling
        rule hides the hint for exactly the duration of a run */
-    #rot { display: none; position: absolute; top: 34px; left: 50%; transform: translateX(-50%); }
+    #rot { display: none; }
     #msg:empty + #rot { display: none; }
     #msg:empty { display: none; }
 
@@ -261,46 +274,52 @@
     @media (orientation: landscape) and (max-height: 330px) { :root { --k: .60 } }
     @media (orientation: landscape) and (max-height: 290px) { :root { --k: .50 } }
     /* applied only where a scale is actually set, so desktop keeps no
-       transform on #game at all */
+       transform on #game at all. Width is a PERCENTAGE on purpose: a
+       definite 100vw/--k would inflate the fr tracks past the viewport
+       (specified sizes feed intrinsic track sizing; percentages resolve
+       after, and the strip's absolute innards contribute ~nothing). The
+       oversize box overhangs right; body's overflow:clip eats it. */
     @media (max-width: 700px), (orientation: landscape) and (max-height: 500px) {
       #game {
-        width: calc(100vw / var(--k)); right: auto;
+        width: calc(100% / var(--k));
         transform: scale(var(--k)); transform-origin: bottom left;
       }
-      #hud { bottom: calc(250px * var(--k)); }
     }
 
-    /* phones: tighter padding, smaller logo bleed */
+    /* phones: one column — logo, title block, then the strip pinned by 1fr */
     @media (max-width: 700px) {
-      body { padding: 24px 24px 300px; gap: 24px; grid-template-columns: 1fr; }
-      main { margin-top: 48px; }
-      img { --lw: max(135px, min(75vw, 682px, calc((100vh - 350px) * 1.13))); }
+      body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto calc(250px * var(--k));
+        grid-template-areas: "logo" "main" "." "hud" "game";
+      }
+      main { padding: 0 24px; }
+      img { --lw: max(135px, min(75vw, 682px, calc((100dvh - 420px) * 1.13))); }
     }
 
     /* portrait phones only: real hardware that can actually be rotated.
        Hint takes the strip's top slot; the play prompt drops below it. */
     @media (orientation: portrait) and (max-width: 700px) {
       #rot { display: block; }
-      #msg { top: 76px; }
+      #msg { margin-top: 76px; }
     }
 
     /* landscape phones: short viewport — cap title/logo by height so the
        header stops crowding the content and the game strip */
     @media (orientation: landscape) and (max-height: 500px) {
-      body { padding: 12px 24px 220px; gap: 12px; }
       /* title + tagline + link on one row so the header clears the game strip */
-      main { margin-top: 12px; display: flex; align-items: center;
+      main { padding: 12px 24px 0 0; display: flex; align-items: center;
              justify-content: flex-end; flex-wrap: wrap; gap: 6px 20px; }
       main h1, main a { margin: 0; }
       h1 { font-size: min(7vw, 8vh); -webkit-text-stroke-width: 4px; }
       /* only ~140px above the strip here; compact the HUD so the two credit
          lines stop colliding with the header row */
-      #hud { gap: 3px; padding-bottom: 6px; }
+      #hud { gap: 3px; margin-bottom: 6px; }
       #song, #art { font-size: 10px; }
       #score, #mute, #info { font-size: 13px; padding: 4px 8px; line-height: 16px; }
       /* the CODEX button is the tallest thing in the header row */
       main a { padding: 5px 12px; font-size: 13px; }
-      img { --lw: max(110px, min(46vh, 40vw)); }
+      img { --lw: max(110px, min(46dvh, 40vw)); }
     }
   </style>
 </head>
@@ -330,19 +349,23 @@
         <button id="hx">✕</button>
         <div id="deadart" hidden><i class="deadico"></i></div>
         <b id="dhead" hidden><span id="gameover">GAME OVER</span> — SCORE <span id="dscore"></span></b>
-        <b class="lbl">CONTROLS</b><br>
-        ↑ / SPACE / TAP / SWIPE ↑ — Jump<br>
-        ↓ / SWIPE ↓ — Dive<br>
-        <a class="obs" href="?hitbox" title="show hitboxes">OBSTACLES</a><br>
-        <a class="ico boat" href="?hitbox" title="show hitboxes"></a> Dive under the boats<br>
-        <a class="ico rock" href="?hitbox" title="show hitboxes"></a> Jump over the rocks
+        <!-- one block, so the flex column doesn't blockify each inline chunk -->
+        <div>
+          <b class="lbl">CONTROLS</b><br>
+          ↑ / SPACE / TAP / SWIPE ↑ — Jump<br>
+          ↓ / SWIPE ↓ — Dive<br>
+          <a class="obs" href="?hitbox" title="show hitboxes">OBSTACLES</a><br>
+          <a class="ico boat" href="?hitbox" title="show hitboxes"></a> Dive under the boats<br>
+          <a class="ico rock" href="?hitbox" title="show hitboxes"></a> Jump over the rocks
+        </div>
         <div id="retry" hidden>JUMP TO RESTART</div>
       </div>
     </dialog>
-    <span id="msg">↑ / tap to <span class="key">play</span></span>
-    <span id="rot">↻ <span class="key">ROTATE</span> FOR MORE ROOM</span>
     <audio id="bgm" src="bgm.mp3" loop preload="none"></audio>
   </div>
+  <!-- grid items overlaying the strip's area (adjacent: #msg:empty + #rot) -->
+  <span id="msg">↑ / tap to <span class="key">play</span></span>
+  <span id="rot">↻ <span class="key">ROTATE</span> FOR MORE ROOM</span>
 
   <script>
     // Shark runner. Coordinate system: y = shark's offset from the waterline
