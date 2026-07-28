@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sharpunk — Web</title>
+  <meta name="description" content="Websites built by Sharpunk.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    body {
+      margin: 0; min-height: 100dvh; box-sizing: border-box;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.5rem; padding: 24px; text-align: center;
+      background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
+      color: #f2f2f2; font-family: ui-monospace, monospace;
+    }
+    img { width: clamp(90px, 20vw, 140px); animation: spin 240s linear infinite; }
+    @keyframes spin { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
+    h1 {
+      letter-spacing: 0.3em; text-transform: uppercase; margin: 0;
+      font-size: clamp(1.4rem, 6vw, 2.5rem); color: #564b9c;
+      -webkit-text-stroke: 6px #a2d741; paint-order: stroke fill;
+    }
+    .tag { color: #a2d741; letter-spacing: 0.3em; margin: 0 0 1.5rem; }
+    a {
+      display: inline-block; padding: 10px 22px;
+      background: linear-gradient(135deg, #241a5e, #5b2ea6);
+      border: 2px solid #a2d741; border-radius: 8px;
+      color: #a2d741; text-decoration: none; letter-spacing: 0.15em;
+      animation: float 7s ease-in-out infinite;
+    }
+    a:hover { filter: brightness(1.2); }
+    li { list-style: none; margin-bottom: 1.5rem; }
+    li:nth-child(2) a { animation-delay: -2.3s; }
+    li:nth-child(3) a { animation-delay: -4.6s; }
+    ul { margin: 0; padding: 0; }
+    small { display: block; margin-top: 0.5rem; color: #b8aee0; }
+    .back { border-color: #564b9c; color: #b8aee0; animation: none; margin-top: 1rem; }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      25%      { transform: translate(2px, -4px); }
+      50%      { transform: translate(-2px, -6px); }
+      75%      { transform: translate(-3px, -2px); }
+    }
+    @media (prefers-reduced-motion: reduce) { a, img { animation: none; } }
+  </style>
+</head>
+<body>
+  <img src="/logo.svg" alt="Sharpunk logo">
+  <h1>Sharpunk</h1>
+  <p class="tag">WEB</p>
+  <ul>
+    <li>
+      <a href="https://sharpmox.github.io/NO-KINGS/codex" target="_blank" rel="noopener">NO KINGS</a>
+      <small>Codex for the NO-KINGS card game</small>
+    </li>
+    <li>
+      <a href="https://sharpmox.github.io/color-pie/" target="_blank" rel="noopener">COLOR PIE</a>
+      <small>MTG Color pie breakdown</small>
+    </li>
+    <li>
+      <a href="https://maison-duroc.fr/" target="_blank" rel="noopener">MAISON DUROC</a>
+      <small>Maison Duroc's official Bakery website</small>
+    </li>
+  </ul>
+  <a class="back" href="/">← BACK</a>
+</body>
+</html>
