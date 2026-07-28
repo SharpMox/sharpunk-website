@@ -60,6 +60,7 @@
       color: #a2d741; text-decoration: none; letter-spacing: 0.15em;
     }
     main a:hover { filter: brightness(1.2); }
+    main a + a { margin-left: 10px; }
     @keyframes float {
       0%, 100% { transform: translate(0, 0); }
       25%      { transform: translate(2px, -4px); }
@@ -318,7 +319,7 @@
       #hud { gap: 3px; margin-bottom: 6px; }
       #song, #art { font-size: 10px; }
       #score, #mute, #info { font-size: 13px; padding: 4px 8px; line-height: 16px; }
-      /* the CODEX button is the tallest thing in the header row */
+      /* the WEB/GAMES buttons are the tallest thing in the header row */
       main a { padding: 5px 12px; font-size: 13px; }
       img { --lw: max(110px, min(46dvh, 40vw)); }
     }
@@ -328,7 +329,8 @@
   <main>
     <h1>Sharpunk</h1>
     <p>WEB &amp; GAMES</p>
-    <a href="https://sharpmox.github.io/NO-KINGS/codex.html">NO-KINGS CODEX</a>
+    <a href="/web">WEB</a>
+    <a href="/games" style="animation-delay: -3.5s">GAMES</a>
   </main>
   <img src="logo.svg" alt="Sharpunk logo">
 
