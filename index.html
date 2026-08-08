@@ -288,8 +288,11 @@
       }
     }
 
-    /* phones: one column — logo, title block, then the strip pinned by 1fr */
-    @media (max-width: 700px) {
+    /* narrow: one column — logo, title block, then the strip pinned by 1fr.
+       1000px, not 700: the logo column is height-driven (caps at 682px wide,
+       ~477px visible), so on tall windows the 4rem title needs ~1000px of
+       viewport before the two-column layout stops clipping the K */
+    @media (max-width: 1000px) {
       body {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto 1fr auto calc(250px * var(--k));
