@@ -143,6 +143,10 @@
       display: flex; align-items: center; gap: 26px; padding: 0 12px 0 18px;
       border-radius: var(--r-pill);
     }
+    /* The .glass top highlight reads as light from above, which works on the
+       big panels but on a 62px pill it just makes the top border look twice
+       as thick as the bottom. Keep the drop shadow, drop the highlight. */
+    .nav { box-shadow: 0 24px 60px rgba(6, 4, 16, .55); }
     .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; margin-right: auto; }
     .brand img { width: 30px; height: 30px; }
     .brand span { font-weight: 700; letter-spacing: .18em; font-size: 14px; text-transform: uppercase; }
