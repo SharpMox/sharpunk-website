@@ -6,13 +6,12 @@
   <title>Sharpunk shark runner</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <style>
-    /* Shared shark-runner strip for the three redesigns.
-       Lifted from the landing page's game, with the single-screen grid removed:
-       here the strip IS the document, so it is a flat 250px box with no --k
-       scaling (the redesigns scroll, so the strip never has to share a
-       viewport with a header). Background stays transparent: the embedding
-       page paints behind it through the iframe.
-       Skin is picked by ?theme= and applied as a class on <html>. */
+    /* The shark-runner strip, embedded by the home page as an iframe.
+       Lifted from the old single-screen landing page with its grid removed:
+       here the strip IS the document, so it is a flat box with no --k scaling
+       (the page scrolls, so the strip never has to share a viewport with a
+       header). Background stays transparent: the embedding page paints behind
+       it through the iframe. Skin comes from ?theme= as a class on <html>. */
     /* The document fills whatever height the embedder gives the iframe, and
        the playfield hugs the bottom of it. In a 250px iframe this resolves to
        exactly 250px, so the strip renders identically to before. The embedder
@@ -34,26 +33,6 @@
       --dialog-radius: 10px;
       --pill-font: ui-monospace, "JetBrains Mono", monospace;
       --accent: #5a1a8f;
-    }
-    .t-signal {
-      --water: rgba(24, 214, 160, .16);
-      --waterline: rgba(162, 215, 65, .55);
-      --pill-bg: rgba(8, 14, 12, .82);
-      --pill-fg: #a2d741;
-      --pill-bd: rgba(162, 215, 65, .38);
-      --pill-radius: 2px;
-      --dialog-radius: 2px;
-      --accent: #7ef0c0;
-    }
-    .t-brutal {
-      --water: rgba(247, 105, 173, .18);
-      --waterline: #f769ad;
-      --pill-bg: #f769ad;
-      --pill-fg: #0b0b0b;
-      --pill-bd: #0b0b0b;
-      --pill-radius: 0px;
-      --dialog-radius: 0px;
-      --accent: #0b0b0b;
     }
     .t-chrome {
       --water: rgba(140, 110, 255, .22);
