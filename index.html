@@ -408,21 +408,167 @@
       .readout { gap: 14px 40px; }
     }
 
-    /* The slot keeps a fixed 250px height and the iframe is absolutely
-       positioned against its bottom edge. That is what lets the iframe grow
-       upward for a dialog without reflowing anything or moving the strip. */
-    .strip-slot { position: relative; height: var(--strip); }
-    .strip-slot > iframe {
-      position: absolute; left: 0; right: 0; bottom: 0;
-      width: 100%; height: var(--strip); border: 0;
-      background: linear-gradient(180deg, var(--strip-top) 0%, #1e1749 55%, #140f30 100%);
-    }
-    /* binary and instant, never transitioned: while expanded the iframe
-       covers the credits, and the game's touch-action:none would block touch
-       scrolling over all of it */
-    .strip-slot.modal { z-index: 90; }
-    .strip-slot.modal > iframe { height: var(--modal-h, 100dvh); }
+    /* ---------------- the shark strip ----------------
+       Lifted from the old single-screen landing page with its grid removed.
+       Everything inside is positioned in px up from the waterline, so the
+       strip's height is simply how much sky is on show. */
 
+
+    /* The playfield. Everything inside is positioned in px up from the
+       waterline, so the strip's height is just how much sky you get. */
+    #game {
+      position: relative; width: 100%; height: var(--strip);
+      overflow: hidden; touch-action: none; user-select: none;
+      /* starts on exactly the colour .s2-top fades into, so the seam vanishes */
+      background: linear-gradient(180deg, var(--strip-top) 0%, #1e1749 55%, #140f30 100%);
+      /* the game's own palette, formerly the ?theme=chrome skin */
+      --water: rgba(140, 110, 255, .22);
+      --waterline: rgba(214, 200, 255, .5);
+      --pill-bg: rgba(255, 255, 255, .1);
+      --pill-fg: #f0ebff;
+      --pill-bd: rgba(255, 255, 255, .22);
+      --pill-radius: 999px;
+      --dialog-radius: 24px;
+      --pill-font: 'JetBrains Mono', ui-monospace, monospace;
+      --accent: #c6b4ff;
+    }
+    #water {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 90px;
+      background: var(--water);
+      border-top: 2px solid var(--waterline);
+      z-index: 1;
+    }
+    /* --- sprites (sheets are @2x, sized here in logical px) ---
+       Animated sheets are horizontal strips of equal cells. `background-size:
+       auto 100%` makes one cell exactly the element's width, so the keyframes
+       just walk background-position-x by whole cells.
+       steps(n, jump-none) lands on both the FIRST and LAST cell, so
+       `forwards` holds the real final frame. */
+    #game .sprite, #game .decor, #game .part {
+      position: absolute;
+      background-repeat: no-repeat; background-position: 0 0; background-size: 100% 100%;
+    }
+    #game .decor { pointer-events: none; }
+    #game .sprite { z-index: 2; }
+    /* zero-size anchor; parts hang off it. Same z as #water but appended
+       later, so the pile paints in front of the tint yet under the shark. */
+    #game .pile { width: 0; height: 0; z-index: 1; }
+
+    #game #shark {
+      width: 93px; height: 75px;
+      background-image: url(/img/sharkswim.webp); background-size: auto 100%;
+      transform: scaleX(-1);               /* art faces left; flip to swim right */
+      animation: swim .34s steps(2) infinite;
+    }
+    #game #shark.jump { background-image: url(/img/sharkjump.webp); animation: a-jump .73s steps(9, jump-none) forwards; }
+    #game #shark.dive { background-image: url(/img/sharkdive.webp); animation: a-dive .2s  steps(5, jump-none) forwards; }
+    #game #shark.surf { background-image: url(/img/sharkdive.webp); animation: a-surf .15s steps(3, jump-none) forwards; }
+    /* death is two phases off one 7-cell sheet: the shark flips once (cells
+       0-3), then fish circle its head forever (cells 4-6). */
+    #game #shark.dead {
+      background-image: url(/img/sharkdead.webp);
+      animation: a-dead .52s steps(4, jump-none) forwards,
+                 a-deadloop .39s steps(3) infinite .52s;
+    }
+    @keyframes swim   { to { background-position-x: -186px } }
+    @keyframes a-jump { to { background-position-x: -744px } }
+    @keyframes a-dive { to { background-position-x: -372px } }
+    @keyframes a-surf { from { background-position-x: -465px } to { background-position-x: -651px } }
+    @keyframes a-dead { to { background-position-x: -279px } }
+    @keyframes a-deadloop { from { background-position-x: -372px }
+                            to   { background-position-x: -651px } }
+
+    #game .bird { background-image: url(/img/bird.webp); background-size: auto 100%;
+                  animation: fly 1.2s steps(3) infinite; }
+    @keyframes fly { to { background-position-x: calc(var(--cw) * -3) } }
+
+    .island { background-image: url(/img/island.webp) }
+    .cloud  { background-image: url(/img/cloud.webp) }
+    .cloud2 { background-image: url(/img/cloud2.webp) }
+    .cloud3 { background-image: url(/img/cloud3.webp) }
+    .coral  { background-image: url(/img/coral.webp) }
+    .fish   { background-image: url(/img/fish.webp); transform: scaleX(-1) }
+    .fish2  { background-image: url(/img/fish2.webp) }
+    .boat   { background-image: url(/img/boat.webp); transform: scaleX(-1) }
+    .rock   { background-image: url(/img/rock.webp) }
+    .rock2  { background-image: url(/img/rock2.webp) }
+
+    .ico { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.35em;
+           background-repeat: no-repeat; background-position: center; background-size: contain; }
+
+    /* HUD, top-right of the strip */
+    #hud {
+      position: absolute; top: 10px; right: 12px; z-index: 4;
+      display: flex; gap: 8px; align-items: center;
+    }
+    #score, #msg, #mute, #info {
+      font-family: var(--pill-font); font-size: 15px; font-weight: 700; letter-spacing: .06em;
+      color: var(--pill-fg); white-space: nowrap;
+      background: var(--pill-bg); border: 2px solid var(--pill-bd);
+      padding: 5px 12px; border-radius: var(--pill-radius); line-height: 19px;
+      backdrop-filter: blur(8px);
+    }
+    #mute, #info { cursor: pointer; padding: 5px 9px; }
+    #mute:focus-visible, #info:focus-visible { outline: 2px solid var(--pill-fg); outline-offset: 2px; }
+    .key { color: var(--accent); }
+    #hiscore { color: var(--accent); }
+    #hiscore::before { content: "|"; color: var(--pill-fg); margin: 0 9px; opacity: .55; }
+
+    #msg {
+      position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
+      z-index: 3; text-transform: uppercase; font-size: 14px;
+    }
+    #msg:empty { display: none; }
+    #score { display: none; }   /* the big readout on screen two says it better */
+
+    /* help / death dialog. Sized as a panel, not a pill: the death state
+       carries ~420px of content, so it needs its own radius token and a real
+       max-width. */
+    #help {
+      background: var(--pill-bg); color: var(--pill-fg);
+      border: 2px solid var(--pill-bd); border-radius: var(--dialog-radius);
+      font-family: var(--pill-font); font-size: 15px; font-weight: 700;
+      padding: 0; line-height: 1.85; outline: none;
+      width: min(92vw, 380px); max-height: 90dvh; overflow: auto;
+      backdrop-filter: blur(14px);
+    }
+    #help::backdrop { background: rgba(8, 6, 15, .72); }
+    #hbody { padding: 16px 26px 22px; display: flex; flex-direction: column; }
+    #hx {
+      align-self: flex-end; margin: -8px -18px -2px 0; cursor: pointer;
+      background: none; border: none; color: inherit; font: bold 18px var(--pill-font); outline: none;
+    }
+    #deadart:not([hidden]) {
+      display: flex; align-items: center; justify-content: center;
+      width: 92px; height: 92px; border-radius: 50%;
+      align-self: center; margin: 2px 0 8px;
+      background: #4464a2; border: 2px solid var(--pill-bd);
+    }
+    .deadico { transform: scale(.86); }
+    .deadico {
+      display: block; width: 93px; height: 75px;
+      background: url(/img/sharkdead.webp) no-repeat; background-size: auto 100%;
+      animation: a-deadloop .39s steps(3) infinite;
+    }
+    #dhead:not([hidden]) { display: block; margin: 0 0 8px; text-align: center; }
+    #gameover, #retry, .lbl, #hbody .obs { color: var(--accent); }
+    #hbody .obs { font-weight: bold; text-decoration: none; }
+    #hbody .obs:hover { text-decoration: underline; }
+    #retry:not([hidden]) { display: block; margin: 14px 0 0; text-align: center; }
+
+    /* narrow strip: the HUD row and the centred prompt overlapped, so the
+       pills shrink and the prompt drops below them */
+    @media (max-width: 720px) {
+      #hud { top: 8px; right: 8px; gap: 6px; }
+      #score, #mute, #info { font-size: 12px; padding: 4px 8px; line-height: 16px; }
+      #hiscore::before { margin: 0 6px; }
+      #msg { top: 52px; font-size: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #game .bird, .deadico { animation: none; }
+    }
+  
     /* ---------------- liquid metal rim ----------------
        An iridescent specular edge that travels around the pill, after the
        liquid-metal component on metal.jakubantalik.com. That one paints two
@@ -544,9 +690,39 @@
       </div>
       </div>
 
-      <div class="strip-slot" id="strip-slot">
-        <iframe id="shark-frame" src="/shark/?theme=chrome&amp;score=off&amp;h=300" title="Sharpunk shark runner game"></iframe>
+      <div id="game">
+        <div id="water"></div>
+        <span id="shark" class="sprite"></span>
+
+        <div id="hud">
+          <span id="score"><span id="cur"></span><span id="hiscore"></span></span>
+          <button id="mute" aria-label="Mute music">SOUND ON</button>
+          <button id="info" aria-label="How to play">?</button>
+        </div>
+
+        <dialog id="help">
+          <div id="hbody">
+            <button id="hx" aria-label="Close">&#10005;</button>
+            <div id="deadart" hidden><i class="deadico"></i></div>
+            <b id="dhead" hidden><span id="gameover">GAME OVER</span> &middot; SCORE <span id="dscore"></span></b>
+            <div>
+              <b class="lbl">CONTROLS</b><br>
+              &uarr; / SPACE / TAP / SWIPE &uarr; : Jump<br>
+              &darr; / SWIPE &darr; : Dive<br>
+              <b class="lbl">OBSTACLES</b><br>
+              <i class="ico boat"></i> Dive under the boats<br>
+              <i class="ico rock"></i> Jump over the rocks
+            </div>
+            <div id="retry" hidden>JUMP TO RESTART</div>
+          </div>
+        </dialog>
+
+        <span id="msg">&uarr; / tap to <span class="key">play</span></span>
+
+        <audio id="bgm" src="/bgm.mp3" loop preload="none"></audio>
+        <audio id="oof" src="/oof.mp3" preload="none"></audio>
       </div>
+
     </section>
   </main>
 
@@ -645,6 +821,7 @@
       let paging = false, idle = 0;
       addEventListener('wheel', e => {
         if (snapOff || reduce) return;      // free scrolling; do not touch it
+        if (pageLocked) { e.preventDefault(); return; }  // a run is live; stay put
         if (e.ctrlKey) return;              // pinch zoom
         if (Math.abs(e.deltaY) < 3) return; // horizontal or noise
         e.preventDefault();
@@ -672,93 +849,341 @@
         });
       }
 
-      /* ---- the strip ---- */
-      const slot = document.getElementById('strip-slot');
-      const frame = document.getElementById('shark-frame');
+      /* ---- the strip ----
+         The game is part of this page now, so the readout is a direct DOM
+         write and the keys are handled where they are pressed. */
       const scoreEl = document.getElementById('ro-score');
-      const bestEl = document.getElementById('ro-best');
-      const liveEl = document.getElementById('ro-live');
-      const pad5 = n => String(n | 0).padStart(5, '0');
-      let prevState = '', modalOpen = false;
-
+      const bestEl  = document.getElementById('ro-best');
+      const liveEl  = document.getElementById('ro-live');
       const setNum = (el, v) => { el.textContent = v; el.dataset.n = v; };
-
-      /* Give a dialog room by growing the iframe upward from its fixed bottom
-         edge. h = 2*bottom - vh puts the iframe's centre, where a modal
-         <dialog> lands, on the viewport's centre. With screen two snapped the
-         slot's bottom is the viewport's bottom, so this is exactly one
-         viewport. The slot's own height never changes, so nothing reflows and
-         the strip cannot move. */
-      function setModal(open, need) {
-        open = !!open;
-        need = need || 460;
-        if (open === modalOpen) return;
-        modalOpen = open;
-        if (open) {
-          const bottom = slot.getBoundingClientRect().bottom;
-          const vh = docEl.clientHeight;
-          // 2*bottom - vh centres the iframe, and so the dialog, on the
-          // viewport. Never shorter than what the child says it needs, and
-          // never taller than the run up to the viewport top, so the dialog
-          // cannot be pushed off the top edge.
-          const h = Math.min(Math.max(2 * bottom - vh, need), Math.max(need, bottom));
-          slot.style.setProperty('--modal-h', Math.round(h) + 'px');
-          // only if the strip is sitting too high to fit the dialog at all
-          if (h > bottom) slot.scrollIntoView({ block: 'end', behavior: 'smooth' });
-        }
-        slot.classList.toggle('modal', open);
+      function setReadout(cur, hi) { setNum(scoreEl, pad5(cur)); setNum(bestEl, pad5(hi)); }
+      function announce(state, cur, hi) {
+        // once per death, never per tick, or a screen reader is spammed 9x a second
+        if (state === 'dead') liveEl.textContent = `Game over. Score ${cur}. Best ${hi}.`;
+        else if (state === 'run') liveEl.textContent = '';
       }
-      // a close message that never lands would leave a transparent iframe over
-      // the whole screen, swallowing clicks and touch scrolling. Recover.
-      frame.addEventListener('load', () => { modalOpen = true; setModal(false); });
-      addEventListener('pageshow', () => { modalOpen = true; setModal(false); });
 
-      addEventListener('message', e => {
-        if (e.source !== frame.contentWindow || !e.data) return;
-        const d = e.data;
-        if (typeof d.sharkScore === 'number') {
-          setNum(scoreEl, pad5(d.sharkScore));
-          setNum(bestEl, pad5(d.sharkHi));
-          // announce once per death, never per tick
-          if (d.sharkState === 'dead' && prevState !== 'dead')
-            liveEl.textContent = `Game over. Score ${d.sharkScore | 0}. Best ${d.sharkHi | 0}.`;
-          else if (d.sharkState === 'run' && prevState !== 'run') liveEl.textContent = '';
-          prevState = d.sharkState;
+    // Shark runner. Coordinate system: y = shark's offset from the waterline
+    // (px, positive = airborne, negative = submerged). Waterline = top of #water.
+
+    const WATER = 90, DIVE_Y = -48;
+    const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
+          curEl = document.getElementById('cur'), hiEl = document.getElementById('hiscore'),
+          msgEl = document.getElementById('msg'),
+          bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute'),
+          oof = document.getElementById('oof');
+    const W = () => game.clientWidth;
+    // narrow screens: hug the left edge for maximum reaction time
+    const sharkX = () => W() < 625 ? 20 : Math.min(200, W() * 0.25);
+    let SHARK_X = sharkX();
+    // never re-seat the shark mid-run: crossing the 625px branch would
+    // teleport it, possibly straight into an obstacle. Rotating a phone
+    // during a run used to do exactly that.
+    addEventListener('resize', () => { if (state !== 'run') SHARK_X = sharkX(); });
+
+    muteEl.addEventListener('click', () => {
+      bgm.muted = !bgm.muted;
+      muteEl.textContent = bgm.muted ? 'SOUND OFF' : 'SOUND ON';
+    });
+
+    const helpEl = document.getElementById('help'), infoEl = document.getElementById('info'),
+          retryEl = document.getElementById('retry'), dscoreEl = document.getElementById('dscore'),
+          deadartEl = document.getElementById('deadart'), dheadEl = document.getElementById('dhead');
+    // same dialog serves both roles: info (controls only) and death (adds GAME OVER + retry)
+    function openHelp(death) {
+      retryEl.hidden = deadartEl.hidden = dheadEl.hidden = !death;
+      if (death) dscoreEl.textContent = String(score | 0).padStart(5, '0');
+      if (!helpEl.open) helpEl.showModal(); // showModal throws if already open
+    }
+    infoEl.addEventListener('click', () => openHelp(false));
+    // in death mode a tap/click anywhere in the dialog body counts as the jump
+    document.getElementById('hbody').addEventListener('click', e => {
+      if (!retryEl.hidden && e.target.id !== 'hx' && !e.target.closest('a')) { helpEl.close(); start(); }
+    });
+    helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.close(); });
+    document.getElementById('hx').addEventListener('click', () => helpEl.close());
+    helpEl.addEventListener('close', () => {
+      if (state === 'dead') msgEl.innerHTML = 'GAME OVER &middot; &uarr; to <span class="key">restart</span>';
+    });
+
+    let stripOn = false, pageLocked = false;
+    let state = 'idle', y = 0, vy = 0, diving = false;
+    let score = 0, hi = +localStorage.sharkHi || 0, t = 0, obstacles = [];
+
+    // Score readout + reporting, gated on the integer actually changing.
+    // score climbs 0.15/frame, so this fires ~9x a second while running and
+    // not at all while idle or dead. It also replaces two DOM writes that
+    // used to run on every single rAF frame to set the same value.
+    const pad5 = n => String(n | 0).padStart(5, '0');
+    let lastCur = -1, lastHi = -1, lastState = '';
+    function report() {
+      const c = score | 0, h = hi | 0;
+      if (c === lastCur && h === lastHi && state === lastState) return;
+      if (c !== lastCur) curEl.textContent = pad5(c);
+      if (h !== lastHi) hiEl.textContent = pad5(h);
+      if (state !== lastState) {
+        // While a run is live, a stray trackpad flick over the strip must not
+        // page away and leave the shark to die unwatched.
+        pageLocked = state === 'run';
+      }
+      if (state !== lastState) announce(state, c, h);
+      lastCur = c; lastHi = h; lastState = state;
+      setReadout(c, h);
+    }
+
+    // Hitboxes, as plain boxes, deliberately tighter than the art. The rock is
+    // two boxes because it's a spike: a narrow tip above the surface over a
+    // wider body below it.
+    const HIT = {
+      shark: { x0: 18, x1: 76, y0: -15, y1: 15 },
+      boat: [{ x0: 12, x1: 85, y0: -5, y1: 115 }],   // hull to masthead
+      rock: [{ x0: 18, x1: 45, y0:  0, y1:  22 },    // tip, above water
+             { x0:  8, x1: 58, y0: -60, y1:  0 }],   // body, submerged
+    };
+
+    // frame-based physics like the original T-rex, assumes ~60fps
+    const GRAV = 0.5, JUMP_V = 11, BASE_SPEED = 6;
+
+    // natural width/height ratio of each sprite sheet, from tools/build-assets.py
+    const ASPECT = { island: 0.633, cloud: 2.188, cloud2: 1.438, cloud3: 1.979, bird: 1.458,
+                     coral: 0.813, fish: 1.583, fish2: 1.808, boat: 0.808, rock: 0.573, rock2: 0.445 };
+    function sprite(cls, h, kind) {
+      const el = document.createElement('span');
+      el.className = kind + ' ' + cls;
+      const w = Math.round(h * ASPECT[cls]);
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+      if (cls === 'bird') el.style.setProperty('--cw', w + 'px'); // cell width for @keyframes fly
+      return el;
+    }
+
+    const SHARK_H = 75;
+    function placeShark() {
+      sharkEl.style.left = SHARK_X + 'px';
+      sharkEl.style.bottom = (WATER + y - SHARK_H / 2) + 'px';
+    }
+
+    // class swap drives the CSS animations; only write it on an actual change,
+    // otherwise every frame restarts the animation from frame 0
+    let sharkState = '';
+    function setShark(s) {
+      if (s !== sharkState) sharkEl.className = 'sprite' + (s ? ' ' + s : '');
+      sharkState = s;
+    }
+
+    function jump() {
+      if (state !== 'run') return start();
+      if (y <= 0 && !diving) vy = JUMP_V;
+    }
+
+    function start() {
+      if (state === 'dead' || state === 'idle') {
+        clearTimeout(deathTimer);
+        obstacles.forEach(o => o.el.remove());
+        obstacles = []; score = 0; y = 0; vy = 0; diving = false; state = 'run';
+        msgEl.textContent = ''; setShark('');
+        bgm.volume = 0.1; bgm.play().catch(() => {}); // low volume; needs a user gesture
+      }
+    }
+
+    function spawn() {
+      const boat = Math.random() < 0.5;
+      let el;
+      if (boat) {
+        // sailboat floats with its hull just under the waterline: dive beneath it
+        el = sprite('boat', 120, 'sprite');
+        el.style.bottom = (WATER - 5) + 'px';
+      } else {
+        // main rock breaking the surface + smaller rocks piled beneath it
+        el = document.createElement('span');
+        el.className = 'sprite pile';
+        el.style.bottom = '0px';
+        for (const [c, h, b, l] of [['rock', 110, 0, 0], ['rock2', 100, -32, -20], ['rock', 110, -45, 28]]) {
+          const r = sprite(c, h, 'part');
+          r.style.bottom = b + 'px';
+          r.style.left = l + 'px';
+          el.appendChild(r);
         }
-        if ('sharkModal' in d) setModal(d.sharkModal, d.need);
-      });
+      }
+      game.appendChild(el);
+      obstacles.push({ el, x: W() + 40, boat });
+    }
 
-      /* ---- forward game keys into the strip while it is on screen ----
-         Never swallow a key a focused control owns, and leave PageUp/PageDown/
-         Home/End unbound so the keyboard always has a way to scroll. */
-      const CONTROL = 'a, button, input, textarea, select, summary, [contenteditable]';
-      let framed = false;
-      new IntersectionObserver(es => { framed = es[0].isIntersecting; }, { threshold: .6 }).observe(frame);
+    // parallax decor: seeded once, recycled by wrapping. bg drifts at 0.3x
+    // game speed behind the water; fg at 1.5x in front of the game sprites.
+    const decor = [];
+    function seedDecor(defs, mult, z, opacity) {
+      for (const [cls, size, bottom] of defs) {
+        const el = sprite(cls, size, 'decor');
+        el.style.bottom = bottom + 'px';
+        el.style.zIndex = z;
+        if (opacity) el.style.opacity = opacity;
+        game.appendChild(el);
+        const ambient = ['cloud', 'cloud2', 'cloud3', 'bird', 'fish', 'fish2'].includes(cls);
+        decor.push({ el, x: Math.random() * W(), mult, ambient });
+      }
+    }
+    let booted = false;
+    function seedAll() {
+    seedDecor([ // sky + horizon, behind the water
+        ['island', 60, WATER], ['island', 44, WATER],
+        ['cloud', 48, 190], ['cloud2', 36, 210], ['cloud3', 42, 170],
+      ], 0.3, 0, 0.55);
+      // birds share the sky layer but fly, so they cross 3x faster than the clouds drift
+      seedDecor([['bird', 24, 185], ['bird', 20, 205]], 0.9, 0, 0.55);
+      seedDecor([ // seabed + swimmers: behind the water, so they read as submerged
+        ['coral', 48, -14], ['coral', 38, -10], ['coral', 44, -16], ['coral', 36, -8],
+        ['fish', 24, 30], ['fish2', 26, 12], ['fish', 22, 44], ['fish2', 20, 20],
+      ], 1.5, 0);
+      decor.forEach(d => { d.el.style.left = d.x + 'px'; });
+    }
 
-      /* The strip's jump/dive/death sheets and its death sound are 141KB and
-         are only reachable once a run starts, so the game holds them back
-         until we say the player can see the strip. Warm them as screen two
-         comes into range, which is a whole gesture before anyone can play. */
-      let warmWanted = false, warmSent = false;
-      const sendWarm = () => {
-        if (!warmWanted || warmSent || !frame.contentWindow) return;
-        warmSent = true;
-        frame.contentWindow.postMessage({ sharkWarm: true }, '*');
-      };
-      new IntersectionObserver(es => {
-        if (es[0].isIntersecting) { warmWanted = true; sendWarm(); }
-      }, { rootMargin: '500px' }).observe(frame);
-      frame.addEventListener('load', sendWarm);   // in range before it finished loading
-      const relay = (e, down) => {
-        if (!framed || !['ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) return;
-        if (e.metaKey || e.ctrlKey || e.altKey) return;
-        const a = document.activeElement;
-        if (a && a !== document.body && a.matches(CONTROL)) return;
-        e.preventDefault();
-        frame.contentWindow.postMessage({ sharkKey: e.code, down }, '*');
-      };
-      addEventListener('keydown', e => relay(e, true));
-      addEventListener('keyup', e => relay(e, false));
+    let deathTimer = 0;
+    function die() {
+      state = 'dead';
+      hi = Math.max(hi, score); localStorage.sharkHi = hi;
+      bgm.pause();
+      oof.muted = bgm.muted; oof.currentTime = 0; oof.play().catch(() => {});
+      // hold the dialog back until the shark has finished flipping
+      deathTimer = setTimeout(() => { if (state === 'dead') openHelp(true); }, 520);
+    }
+
+    function tick() {
+      t++;
+      if (state === 'run') {
+        score += 0.15;
+        // matches Chrome T-rex: start 6, accelerate ~0.001/frame, cap at 13.
+        // narrow screen = mobile; 25% slower there for thumb reaction time
+        const speed = Math.min(13, BASE_SPEED + score * 0.007) * (W() < 625 ? 0.75 : 1);
+
+        if (y > 0 || vy > 0) { y += vy; vy -= GRAV; if (y < 0 && !diving) { y = 0; vy = 0; } }
+        else y += ((diving ? DIVE_Y : 0) - y) * 0.3;
+
+        const last = obstacles[obstacles.length - 1];
+        if (!last || last.x < W() - (300 + Math.random() * 400 + speed * 40)) spawn();
+
+        const sx0 = SHARK_X + HIT.shark.x0, sx1 = SHARK_X + HIT.shark.x1,
+              sy0 = y + HIT.shark.y0,       sy1 = y + HIT.shark.y1;
+        for (const o of obstacles) {
+          o.x -= speed;
+          o.el.style.left = o.x + 'px'; // vertical position was fixed at spawn
+          for (const b of (o.boat ? HIT.boat : HIT.rock)) {
+            if (o.x + b.x0 < sx1 && o.x + b.x1 > sx0 && b.y0 < sy1 && b.y1 > sy0) { die(); break; }
+          }
+        }
+        obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
+
+        for (const d of decor) {
+          d.x -= speed * d.mult;
+          if (d.x < -100) d.x = W() + 100;
+          d.el.style.left = d.x + 'px';
+        }
+      } else {
+        for (const d of decor) {
+          if (!d.ambient) continue;
+          d.x -= 0.4 * d.mult; // slowest drift while paused
+          if (d.x < -100) d.x = W() + 100;
+          d.el.style.left = d.x + 'px';
+        }
+        if (state === 'idle') y = Math.sin(t / 20) * 4; // idle bob
+      }
+      // pick the pose. `surf` covers the rise back to the surface after a dive.
+      if (state === 'dead') setShark('dead');
+      else if (state !== 'run') setShark('');
+      else if (y > 0 || vy > 0) setShark('jump');
+      else if (diving) setShark('dive');
+      else if (y < -2) setShark('surf');
+      else setShark('');
+      placeShark();
+      report();
+      requestAnimationFrame(tick);
+    }
+
+    function onKey(code, down) {
+      if (helpEl.open) {
+        if (down && !retryEl.hidden && (code === 'ArrowUp' || code === 'Space')) { helpEl.close(); start(); }
+        return;
+      }
+      if (down && (code === 'ArrowUp' || code === 'Space')) jump();
+      if (code === 'ArrowDown') {
+        diving = down;
+        if (down && state !== 'run') start();
+      }
+    }
+    /* The game shares the document now, so it only takes the arrows while the
+       strip is actually on screen and never from a focused control. PageUp,
+       PageDown, Home and End stay unbound, so the keyboard always has a way
+       to move the page. */
+    const CONTROL = 'a, button, input, textarea, select, summary, [contenteditable]';
+    const gameKeys = ['ArrowUp', 'ArrowDown', 'Space'];
+    function ownsKey(e) {
+      if (!stripOn || !gameKeys.includes(e.code)) return false;
+      if (e.metaKey || e.ctrlKey || e.altKey) return false;
+      const a = document.activeElement;
+      if (a && a !== document.body && a.matches(CONTROL)) return false;
+      return true;
+    }
+    addEventListener('keydown', e => {
+      if (!ownsKey(e)) return;
+      e.preventDefault();
+      onKey(e.code, true);
+    });
+    addEventListener('keyup', e => { if (gameKeys.includes(e.code)) onKey(e.code, false); });
+
+    // touch: swipe up = surface/jump, swipe down = dive (toggle), tap = jump.
+    // preventDefault only once a run is live, so the strip does not trap the
+    // embedding page's scroll before the player has opted in.
+    const isControl = e => e.target.closest('a, button, dialog');
+    const SWIPE = 24;
+    let startY = null;
+    game.addEventListener('touchstart', e => {
+      if (isControl(e)) return;
+      if (state === 'run') e.preventDefault();
+      startY = e.touches[0].clientY;
+    }, { passive: false });
+    game.addEventListener('touchend', e => {
+      if (isControl(e) || startY === null) return;
+      const dy = e.changedTouches[0].clientY - startY;
+      startY = null;
+      if (dy < -SWIPE) { if (diving) diving = false; else jump(); }        // swipe up
+      else if (dy > SWIPE) { diving = true; if (state !== 'run') start(); } // swipe down
+      else jump();                                                         // tap
+    });
+
+    // These sheets are only reachable once a run starts, and with the death
+    // sound they are 141KB. The strip sits a full screen down, so none of it
+    // is fetched until screen two comes into range.
+    let warmed = false;
+    function warm() {
+      if (warmed) return;
+      warmed = true;
+      for (const n of ['sharkjump', 'sharkdive', 'sharkdead', 'boat', 'rock', 'rock2'])
+        new Image().src = '/img/' + n + '.webp';
+      oof.load();
+    }
+    // backstops: never let a run begin on cold assets
+    addEventListener('keydown', warm, { once: true });
+    addEventListener('pointerdown', warm, { once: true });
+
+    /* Nothing above has touched the network or started a loop. boot() seeds
+       the decor, which is what pulls the idle sprites, and starts the frame
+       loop. The page calls it as screen two comes into range, so screen one
+       costs neither the requests nor a running rAF loop. */
+    function boot() {
+      if (booted) return;
+      booted = true;
+      seedAll();
+      warm();
+      tick();
+    }
+    /* Boot as screen two comes into range: the decor requests and the frame
+       loop both wait until then, so screen one costs neither. A second, tighter
+       observer decides when the strip owns the keyboard. */
+    new IntersectionObserver(es => { if (es[0].isIntersecting) boot(); },
+      { rootMargin: '400px' }).observe(game);
+    new IntersectionObserver(es => { stripOn = es[0].isIntersecting; },
+      { threshold: .5 }).observe(game);
+  
     })();
   </script>
 </body>
