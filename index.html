@@ -171,7 +171,7 @@
        wraps. The figures come from measuring the two strings in Outfit at
        this weight and tracking. */
     h1 {
-      margin: 0 0 34px; font-weight: 700; letter-spacing: -.045em; line-height: .92;
+      margin: 0 0 20px; font-weight: 700; letter-spacing: -.045em; line-height: .92;
       --wm: 9.4vw;                      /* two-column hero */
     }
     @media (max-width: 960px) { h1 { --wm: 16.2vw; } }   /* single column: full shell */
@@ -261,8 +261,21 @@
       63.4% { transform: translate3d(.004em, 0, 0) skewX(-.6deg); }
       64.4%, 100% { transform: none; }
     }
-    }
 
+    /* click-to-copy address. A button, not a link: it performs an action
+       rather than navigating, and aria-live announces the confirmation. */
+    .mailcopy {
+      font: inherit; color: inherit; letter-spacing: inherit;
+      background: none; border: 0; padding: 0; cursor: pointer;
+    }
+    .mailcopy:hover { color: var(--violet); }
+    .mailcopy:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; border-radius: 4px; }
+    .mailcopy[data-copied] { color: var(--violet); }
+    .hero-mail {
+      display: inline-flex; align-items: center;
+      font-family: var(--mono); font-size: 12px; letter-spacing: .1em;
+      color: var(--muted); margin: 0 0 30px;
+    }
     .cta-row { display: flex; flex-wrap: wrap; gap: 14px; }
     .btn {
       display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
@@ -489,6 +502,7 @@
             <span class="line l1 ghost" data-text="Sharpunk">Sharpunk</span>
             <span class="line l2 ghost" data-text="Web &amp; Games">Web &amp; Games</span>
           </h1>
+          <button class="mailcopy hero-mail" type="button" data-mail="sharpunk.soft@gmail.com" aria-live="polite">sharpunk.soft@gmail.com</button>
           <div class="cta-row">
             <a class="btn btn-primary magnet" href="#play">Play</a>
             <a class="btn btn-ghost" href="/web/">Web</a>
@@ -591,6 +605,29 @@
       if (window.visualViewport) visualViewport.addEventListener('resize', schedule);
       // toggling .no-snap has no layout effect, so this cannot re-trigger itself
       new ResizeObserver(schedule).observe(document.body);
+
+      /* click-to-copy address, with a fallback for contexts where the async
+         clipboard API is unavailable or refused */
+      document.querySelectorAll('.mailcopy').forEach(btn => {
+        const addr = btn.dataset.mail, label = btn.textContent;
+        let restore = 0;
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(addr);
+          } catch {
+            const t = document.createElement('textarea');
+            t.value = addr; t.setAttribute('readonly', '');
+            t.style.cssText = 'position:fixed;top:-9999px;opacity:0';
+            document.body.appendChild(t); t.select();
+            try { document.execCommand('copy'); } finally { t.remove(); }
+          }
+          btn.textContent = 'Copied'; btn.dataset.copied = '';
+          clearTimeout(restore);
+          restore = setTimeout(() => {
+            btn.textContent = label; delete btn.dataset.copied;
+          }, 1600);
+        });
+      });
 
       /* ---- one gesture, one screen ----
          CSS mandatory snap on its own only decides where a scroll LANDS: a
