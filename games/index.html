@@ -3,56 +3,366 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sharpunk — Games</title>
-  <meta name="description" content="Games built by Sharpunk.">
+  <title>Games - Sharpunk</title>
+  <meta name="description" content="Games built by Sharpunk: NO-KINGS, a chess variant card game, open source on GitHub.">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
   <style>
+    /* ============================================================
+       SHARPUNK / LIQUID CHROME - games
+       One game, so it gets a feature treatment rather than a list.
+       Layout families here: page header, full-bleed saturated feature,
+       footer. Deliberately none of the Web page's sticky stack.
+       Dials: DESIGN_VARIANCE 8 - MOTION_INTENSITY 7 - VISUAL_DENSITY 3
+       ============================================================ */
+
+    @font-face {
+      font-family: 'Outfit'; src: url(/fonts/outfit.woff2) format('woff2');
+      font-weight: 100 900; font-display: swap;
+    }
+    @font-face {
+      font-family: 'JetBrains Mono'; src: url(/fonts/jetbrains-mono.woff2) format('woff2');
+      font-weight: 100 800; font-display: swap;
+    }
+
+    :root {
+      --bg:      #090615;
+      --violet:  #9b7bff;
+      --violet-2:#6d4ad6;
+      --fg:      #ece8fb;
+      --muted:   #9d95bd;
+      --glass:   rgba(255, 255, 255, .055);
+      --glass-2: rgba(255, 255, 255, .085);
+      --edge:    rgba(255, 255, 255, .11);
+      --edge-2:  rgba(255, 255, 255, .19);
+      --r-panel: 24px;
+      --r-pill:  999px;
+      --shell:   1340px;
+      --display: 'Outfit', system-ui, sans-serif;
+      --mono:    'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; overflow-x: clip; }
     body {
-      margin: 0; min-height: 100dvh; box-sizing: border-box;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 0.5rem; padding: 24px; text-align: center;
-      background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
-      color: #f2f2f2; font-family: ui-monospace, monospace;
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: var(--display); font-size: 16px; line-height: 1.65; font-weight: 300;
+      -webkit-font-smoothing: antialiased; overflow-x: clip;
     }
-    img { width: clamp(90px, 20vw, 140px); animation: spin 240s linear infinite; }
-    @keyframes spin { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
-    h1 {
-      letter-spacing: 0.3em; text-transform: uppercase; margin: 0;
-      font-size: clamp(1.4rem, 6vw, 2.5rem); color: #564b9c;
-      -webkit-text-stroke: 6px #a2d741; paint-order: stroke fill;
+    a { color: inherit; }
+    ::selection { background: var(--violet); color: #0b0818; }
+    .shell { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 26px; }
+    @media (max-width: 640px) { .shell { padding: 0 18px; } }
+
+    /* ---------------- aurora field ---------------- */
+    .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .aurora i {
+      position: absolute; display: block; border-radius: 50%;
+      filter: blur(90px); opacity: .55; will-change: transform;
     }
-    .tag { color: #a2d741; letter-spacing: 0.3em; margin: 0 0 1.5rem; }
-    a {
-      display: inline-block; padding: 10px 22px;
-      background: linear-gradient(135deg, #241a5e, #5b2ea6);
-      border: 2px solid #a2d741; border-radius: 8px;
-      color: #a2d741; text-decoration: none; letter-spacing: 0.15em;
-      animation: float 7s ease-in-out infinite;
+    .aurora .b1 { width: 56vw; height: 56vw; left: -12vw; top: -14vw;
+                  background: radial-gradient(circle, #5b2ea6, transparent 68%);
+                  animation: drift1 28s ease-in-out infinite; }
+    .aurora .b2 { width: 48vw; height: 48vw; right: -10vw; top: 12vh;
+                  background: radial-gradient(circle, #3a2a8f, transparent 66%);
+                  animation: drift2 34s ease-in-out infinite; }
+    .aurora .b3 { width: 44vw; height: 44vw; left: 24vw; bottom: -18vw;
+                  background: radial-gradient(circle, #7a3f9e, transparent 70%);
+                  animation: drift3 40s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); }
+                        50%     { transform: translate3d(8vw, 6vh, 0) scale(1.14); } }
+    @keyframes drift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.08); }
+                        50%     { transform: translate3d(-7vw, 9vh, 0) scale(.92); } }
+    @keyframes drift3 { 0%,100% { transform: translate3d(0,0,0) scale(.96); }
+                        50%     { transform: translate3d(6vw, -8vh, 0) scale(1.1); } }
+    .veil { position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 0%, transparent, var(--bg) 78%); }
+    main, header, footer { position: relative; z-index: 2; }
+
+    /* ---------------- glass primitive (web approximation) ---------------- */
+    .glass {
+      background: linear-gradient(150deg, var(--glass-2), var(--glass));
+      border: 1px solid var(--edge);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 24px 60px rgba(6, 4, 16, .55);
+      backdrop-filter: blur(22px) saturate(150%);
+      -webkit-backdrop-filter: blur(22px) saturate(150%);
+      border-radius: var(--r-panel);
     }
-    a:hover { filter: brightness(1.2); }
-    li { list-style: none; margin-bottom: 1.5rem; }
-    ul { margin: 0; padding: 0; }
-    small { display: block; margin-top: 0.5rem; color: #b8aee0; }
-    .back { border-color: #564b9c; color: #b8aee0; animation: none; margin-top: 1rem; }
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0); }
-      25%      { transform: translate(2px, -4px); }
-      50%      { transform: translate(-2px, -6px); }
-      75%      { transform: translate(-3px, -2px); }
+    @media (prefers-reduced-transparency: reduce) {
+      .glass { background: #14102a; backdrop-filter: none; -webkit-backdrop-filter: none; }
     }
-    @media (prefers-reduced-motion: reduce) { a, img { animation: none; } }
+
+    /* ---------------- nav ---------------- */
+    header { position: sticky; top: 16px; z-index: 40; padding: 0 26px; }
+    .nav {
+      max-width: var(--shell); margin: 0 auto; height: 62px;
+      display: flex; align-items: center; gap: 26px; padding: 0 12px 0 18px;
+      border-radius: var(--r-pill);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; margin-right: auto; }
+    .brand img { width: 30px; height: 30px; }
+    .brand span { font-weight: 700; letter-spacing: .18em; font-size: 14px; text-transform: uppercase; }
+    .nav nav { display: flex; gap: 8px; }
+    .nav nav a {
+      text-decoration: none; font-size: 13px; color: var(--muted); font-weight: 500;
+      padding: 8px 14px; border-radius: var(--r-pill);
+      transition: background .3s cubic-bezier(.16,1,.3,1), color .3s;
+    }
+    .nav nav a:hover, .nav nav a:focus-visible { color: var(--fg); background: var(--glass-2); }
+    .nav nav a[aria-current="page"] { color: var(--fg); background: var(--glass-2); }
+    @media (max-width: 560px) {
+      .brand span { display: none; }
+      .nav { gap: 10px; padding: 0 8px 0 14px; }
+      .nav nav { gap: 2px; }
+      .nav nav a { padding: 8px 10px; font-size: 12.5px; }
+    }
+
+    /* ---------------- page header ---------------- */
+    /* longhands: the padding shorthand here would zero out the horizontal
+       padding .shell provides, leaving the huge title flush against the
+       viewport edge on narrow screens */
+    .page-head { padding-top: 74px; padding-bottom: 52px; }
+    .page-head h1 {
+      margin: 0 0 20px; font-weight: 500; letter-spacing: -.04em; line-height: 1;
+      font-size: clamp(3rem, 9vw, 7rem);
+    }
+    /* background-clip: text paints only inside the element's box, so a
+       descender would fall outside it and render transparent. The padding
+       grows the box past it; the negative margin gives the space back. */
+    .page-head h1 em {
+      font-style: italic; font-weight: 500;
+      background: linear-gradient(100deg, var(--violet), #d9c9ff 70%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      line-height: 1.15; display: inline-block;
+      /* background-clip: text paints only inside the element's box. An italic
+         run overhangs its advance width on the last glyph and drops below the
+         baseline, so both edges need slack or the final letter is sliced
+         (the d in "made" was rendering as an a). The negative margins hand
+         the space back to the layout. */
+      padding-bottom: .18em; margin-bottom: -.14em;
+      padding-right: .16em; margin-right: -.16em;
+    }
+    .page-head p { margin: 0; color: var(--muted); max-width: 54ch; font-size: 1.06rem; }
+    @media (max-width: 700px) { .page-head { padding-top: 48px; padding-bottom: 34px; } }
+
+    /* ---------------- the feature ----------------
+       One game, so it gets the page's one saturated surface rather than a
+       card in a list. Still inside the dark theme. */
+    .feature {
+      padding: 68px 0 72px; position: relative; z-index: 2;
+      background: linear-gradient(115deg, #241a5e 0%, #3a2472 52%, #1b1338 100%);
+      border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge);
+    }
+    .feature-in {
+      display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+      gap: 54px; align-items: center;
+    }
+    /* Larry, framed as a portrait card. His black is baked into the art, not
+       transparent, so rather than fight it the black becomes the card, which
+       suits a card game. Cropped toward his face: the eyes sit at 40% down a
+       128x228 frame (measured off the rendered pixels), and the object-position
+       below places them just above the card's centre. */
+    .feature-mark {
+      width: 100%; max-width: 230px; justify-self: center;
+      aspect-ratio: 4 / 5; overflow: hidden; display: block;
+      border-radius: var(--r-panel);
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 22px 50px rgba(9,6,21,.62);
+      background: #000;
+    }
+    .feature-mark video {
+      width: 100%; height: 100%; display: block;
+      object-fit: cover; object-position: 50% 36%;
+    }
+    .feature h2 {
+      margin: 0 0 6px; font-weight: 500; letter-spacing: -.035em; line-height: 1;
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+    }
+    .feature .kind {
+      display: block; margin: 0 0 18px; font-family: var(--mono);
+      font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: #bcaef0;
+    }
+    .feature p { margin: 0 0 26px; color: #cfc7ee; max-width: 50ch; font-size: 1.06rem; }
+
+    /* facts, grouped rather than a hairline-per-row spec list */
+    .facts { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 30px; padding: 0; list-style: none; }
+    .facts li {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+      color: #ded7ff; padding: 9px 16px; border-radius: var(--r-pill);
+      background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.16);
+    }
+
+    .go-row { display: flex; flex-wrap: wrap; gap: 14px; }
+    .go {
+      display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+      font-size: 13px; font-weight: 500; white-space: nowrap;
+      padding: 13px 24px; border-radius: var(--r-pill);
+      border: 1px solid var(--edge-2); color: var(--fg); background: rgba(255,255,255,.08);
+      transition: background .3s, transform .25s cubic-bezier(.16,1,.3,1);
+    }
+    .go:hover { background: rgba(255,255,255,.16); transform: translateY(-2px); }
+    .go:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    .go .arw { transition: transform .3s cubic-bezier(.16,1,.3,1); }
+    .go:hover .arw { transform: translateX(4px); }
+    .go-solid { background: var(--fg); color: #0b0818; border-color: transparent; font-weight: 700; }
+    .go-solid:hover { background: #fff; }
+
+    @media (max-width: 860px) {
+      .feature { padding: 46px 0 50px; }
+      .feature-in { grid-template-columns: 1fr; gap: 26px; justify-items: start; }
+      .feature-mark { max-width: 170px; justify-self: start; }
+    }
+
+    /* ---------------- footer ---------------- */
+    footer { padding: 46px 0 50px; }
+    .foot-base {
+      display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap;
+      padding: 22px 26px; border-radius: var(--r-pill);
+      font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .foot-base a { color: var(--violet); text-decoration: none; }
+    .foot-base a:hover { color: var(--fg); }
+    .foot-base .mk { display: flex; align-items: center; gap: 12px; color: var(--fg); text-decoration: none; }
+    .foot-base .mk img { width: 30px; height: 30px; }
+
+    /* ---------------- reveal ---------------- */
+    .reveal { opacity: 0; transform: translateY(22px); }
+    .reveal.in {
+      opacity: 1; transform: none;
+      transition: opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1);
+      transition-delay: var(--d, 0ms);
+    }
+    /* ---------------- liquid metal rim ----------------
+       An iridescent specular edge that travels around the pill, after the
+       liquid-metal component on metal.jakubantalik.com. That one paints two
+       2D canvases per button; this is the CSS equivalent: a conic gradient
+       masked down to just the border ring, with a drop-shadow so the bright
+       part blooms outward the way the reference does.
+       --metal has to be registered with @property: an unregistered custom
+       property is not interpolatable, so the sweep would snap rather than
+       travel. Without @property support the rim still renders, just static. */
+    @property --metal {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
+    }
+    .btn, .go { position: relative; }
+    .btn::before, .go::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      padding: 1.5px; pointer-events: none;
+      background: conic-gradient(from var(--metal),
+        transparent 0deg,
+        rgba(255, 255, 255, .95) 16deg,
+        #f769ad 30deg,
+        #9b7bff 48deg,
+        rgba(150, 225, 255, .9) 62deg,
+        transparent 92deg,
+        transparent 186deg,
+        rgba(255, 255, 255, .6) 206deg,
+        #9b7bff 226deg,
+        transparent 262deg,
+        transparent 360deg);
+      /* keep only the ring: the border box minus the content box */
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      filter: drop-shadow(0 0 5px rgba(155, 123, 255, .5));
+      animation: metal-sweep 6s linear infinite;
+    }
+    @keyframes metal-sweep { to { --metal: 360deg; } }
+    /* the solid button sits out: content:none removes the pseudo-element
+       altogether rather than just hiding it */
+    .go-solid::before { content: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      /* hold the rim still, but keep it */
+      .btn::before, .go::before { animation: none; }
+      html { scroll-behavior: auto; }
+      .reveal, .reveal.in { opacity: 1; transform: none; transition: none; }
+      .aurora i { animation: none; }
+      .go, .nav nav a { transition: none; }
+    }
   </style>
 </head>
 <body>
-  <img src="/logo.svg" alt="Sharpunk logo">
-  <h1>Sharpunk</h1>
-  <p class="tag">GAMES</p>
-  <ul>
-    <li>
-      <a href="https://github.com/SharpMox/NO-KINGS" target="_blank" rel="noopener">NO-KINGS</a>
-      <small>NO KINGS Open Source code on GitHub</small>
-    </li>
-  </ul>
-  <a class="back" href="/">← BACK</a>
+  <div class="aurora" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+  <div class="veil" aria-hidden="true"></div>
+
+  <header>
+    <div class="nav glass">
+      <a class="brand" href="/"><img src="/logo.svg" alt=""><span>Sharpunk</span></a>
+      <nav>
+        <a href="/web/">Web</a>
+        <a href="/games/" aria-current="page">Games</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="shell page-head">
+      <h1 class="reveal">Our <em>Games</em></h1>
+      <p class="reveal" style="--d:90ms">A chess variant played with cards, built in the open.</p>
+    </div>
+
+    <section class="feature">
+      <div class="shell feature-in">
+        <span class="feature-mark reveal">
+          <video src="/art/larry.mp4" poster="/art/larry-anim.webp"
+                 autoplay loop muted playsinline aria-label="Larry, a NO-KINGS piece"></video>
+        </span>
+        <div class="reveal" style="--d:90ms">
+          <span class="kind">Chess variant, card game</span>
+          <h2>NO-KINGS</h2>
+          <p>Every piece is a card, and none of them is a king. The Codex documents the full set, with a move diagram and Betza notation for each one.</p>
+          <ul class="facts">
+            <li>38 pieces</li>
+            <li>Open source</li>
+          </ul>
+          <div class="go-row">
+            <a class="go go-solid" href="https://github.com/SharpMox/NO-KINGS" target="_blank" rel="noopener">View the source <span class="arw">&rarr;</span></a>
+            <a class="go" href="https://sharpmox.github.io/NO-KINGS/codex" target="_blank" rel="noopener">Read the Codex <span class="arw">&rarr;</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <div class="foot-base glass">
+        <a class="mk" href="/"><img src="/logo.svg" alt=""> Sharpunk</a>
+        <a href="mailto:sharpunk.soft@gmail.com">sharpunk.soft@gmail.com</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      // an autoplaying loop is motion like any other: hold the poster frame
+      // when the visitor has asked for less of it
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.querySelectorAll('video[autoplay]').forEach(v => {
+          v.removeAttribute('autoplay'); v.pause(); v.currentTime = 0;
+        });
+      }
+      const io = new IntersectionObserver(es => {
+        for (const e of es) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      }, { threshold: 0, rootMargin: '0px 0px -7% 0px' });
+      document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+      /* An instant jump moves an element from below the viewport to above it
+         without ever being intersecting, so the observer never fires. Sweep
+         anything already at or above the fold. */
+      const sweep = () => document.querySelectorAll('.reveal:not(.in)').forEach(el => {
+        if (el.getBoundingClientRect().top < innerHeight) { el.classList.add('in'); io.unobserve(el); }
+      });
+      addEventListener('load', sweep);
+      addEventListener('hashchange', () => setTimeout(sweep, 700));
+      if ('onscrollend' in window) addEventListener('scrollend', sweep);
+    })();
+  </script>
 </body>
 </html>

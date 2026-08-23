@@ -3,66 +3,463 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sharpunk — Web</title>
-  <meta name="description" content="Websites built by Sharpunk.">
+  <title>Web - Sharpunk</title>
+  <meta name="description" content="Websites built by Sharpunk: the NO KINGS Codex, Color Pie, and Maison Duroc.">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
   <style>
+    /* ============================================================
+       SHARPUNK / LIQUID CHROME - web
+       The three live sites. Same language as the home page, different
+       layout families: page header, sticky stack, footer.
+       Dials: DESIGN_VARIANCE 8 - MOTION_INTENSITY 7 - VISUAL_DENSITY 3
+       ============================================================ */
+
+    @font-face {
+      font-family: 'Outfit'; src: url(/fonts/outfit.woff2) format('woff2');
+      font-weight: 100 900; font-display: swap;
+    }
+    @font-face {
+      font-family: 'JetBrains Mono'; src: url(/fonts/jetbrains-mono.woff2) format('woff2');
+      font-weight: 100 800; font-display: swap;
+    }
+
+    :root {
+      --bg:      #090615;
+      --violet:  #9b7bff;
+      --violet-2:#6d4ad6;
+      --fg:      #ece8fb;
+      --muted:   #9d95bd;
+      --glass:   rgba(255, 255, 255, .055);
+      --glass-2: rgba(255, 255, 255, .085);
+      --edge:    rgba(255, 255, 255, .11);
+      --edge-2:  rgba(255, 255, 255, .19);
+      --r-panel: 24px;
+      --r-media: 18px;
+      --r-pill:  999px;
+      --shell:   1340px;
+      --display: 'Outfit', system-ui, sans-serif;
+      --mono:    'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; overflow-x: clip; }
     body {
-      margin: 0; min-height: 100dvh; box-sizing: border-box;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 0.5rem; padding: 24px; text-align: center;
-      background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
-      color: #f2f2f2; font-family: ui-monospace, monospace;
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: var(--display); font-size: 16px; line-height: 1.65; font-weight: 300;
+      /* clip, not hidden: hidden on one axis computes the other to auto,
+         which makes body a scroll container. The sticky cards then resolve
+         against body instead of the viewport and sit permanently offset by
+         their `top`, which showed up as a phantom gap above the list. */
+      -webkit-font-smoothing: antialiased; overflow-x: clip;
     }
-    img { width: clamp(90px, 20vw, 140px); animation: spin 240s linear infinite; }
-    @keyframes spin { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
-    h1 {
-      letter-spacing: 0.3em; text-transform: uppercase; margin: 0;
-      font-size: clamp(1.4rem, 6vw, 2.5rem); color: #564b9c;
-      -webkit-text-stroke: 6px #a2d741; paint-order: stroke fill;
+    a { color: inherit; }
+    ::selection { background: var(--violet); color: #0b0818; }
+    .shell { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 26px; }
+    @media (max-width: 640px) { .shell { padding: 0 18px; } }
+
+    /* ---------------- aurora field ---------------- */
+    .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .aurora i {
+      position: absolute; display: block; border-radius: 50%;
+      filter: blur(90px); opacity: .55; will-change: transform;
     }
-    .tag { color: #a2d741; letter-spacing: 0.3em; margin: 0 0 1.5rem; }
-    a {
-      display: inline-block; padding: 10px 22px;
-      background: linear-gradient(135deg, #241a5e, #5b2ea6);
-      border: 2px solid #a2d741; border-radius: 8px;
-      color: #a2d741; text-decoration: none; letter-spacing: 0.15em;
-      animation: float 7s ease-in-out infinite;
+    .aurora .b1 { width: 56vw; height: 56vw; left: -12vw; top: -14vw;
+                  background: radial-gradient(circle, #5b2ea6, transparent 68%);
+                  animation: drift1 28s ease-in-out infinite; }
+    .aurora .b2 { width: 48vw; height: 48vw; right: -10vw; top: 12vh;
+                  background: radial-gradient(circle, #3a2a8f, transparent 66%);
+                  animation: drift2 34s ease-in-out infinite; }
+    .aurora .b3 { width: 44vw; height: 44vw; left: 24vw; bottom: -18vw;
+                  background: radial-gradient(circle, #7a3f9e, transparent 70%);
+                  animation: drift3 40s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); }
+                        50%     { transform: translate3d(8vw, 6vh, 0) scale(1.14); } }
+    @keyframes drift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.08); }
+                        50%     { transform: translate3d(-7vw, 9vh, 0) scale(.92); } }
+    @keyframes drift3 { 0%,100% { transform: translate3d(0,0,0) scale(.96); }
+                        50%     { transform: translate3d(6vw, -8vh, 0) scale(1.1); } }
+    .veil { position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 0%, transparent, var(--bg) 78%); }
+    main, header, footer { position: relative; z-index: 2; }
+
+    /* ---------------- glass primitive (web approximation) ---------------- */
+    .glass {
+      background: linear-gradient(150deg, var(--glass-2), var(--glass));
+      border: 1px solid var(--edge);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 24px 60px rgba(6, 4, 16, .55);
+      backdrop-filter: blur(22px) saturate(150%);
+      -webkit-backdrop-filter: blur(22px) saturate(150%);
+      border-radius: var(--r-panel);
     }
-    a:hover { filter: brightness(1.2); }
-    li { list-style: none; margin-bottom: 1.5rem; }
-    li:nth-child(2) a { animation-delay: -2.3s; }
-    li:nth-child(3) a { animation-delay: -4.6s; }
-    ul { margin: 0; padding: 0; }
-    small { display: block; margin-top: 0.5rem; color: #b8aee0; }
-    .back { border-color: #564b9c; color: #b8aee0; animation: none; margin-top: 1rem; }
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0); }
-      25%      { transform: translate(2px, -4px); }
-      50%      { transform: translate(-2px, -6px); }
-      75%      { transform: translate(-3px, -2px); }
+    @media (prefers-reduced-transparency: reduce) {
+      .glass { background: #14102a; backdrop-filter: none; -webkit-backdrop-filter: none; }
     }
-    @media (prefers-reduced-motion: reduce) { a, img { animation: none; } }
+
+    /* ---------------- nav ---------------- */
+    header { position: sticky; top: 16px; z-index: 40; padding: 0 26px; }
+    .nav {
+      max-width: var(--shell); margin: 0 auto; height: 62px;
+      display: flex; align-items: center; gap: 26px; padding: 0 12px 0 18px;
+      border-radius: var(--r-pill);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; margin-right: auto; }
+    .brand img { width: 30px; height: 30px; }
+    .brand span { font-weight: 700; letter-spacing: .18em; font-size: 14px; text-transform: uppercase; }
+    .nav nav { display: flex; gap: 8px; }
+    .nav nav a {
+      text-decoration: none; font-size: 13px; color: var(--muted); font-weight: 500;
+      padding: 8px 14px; border-radius: var(--r-pill);
+      transition: background .3s cubic-bezier(.16,1,.3,1), color .3s;
+    }
+    .nav nav a:hover, .nav nav a:focus-visible { color: var(--fg); background: var(--glass-2); }
+    .nav nav a[aria-current="page"] { color: var(--fg); background: var(--glass-2); }
+    /* Work is its own page, so the links stay reachable on phones: the
+       wordmark drops instead, and the pills tighten. */
+    @media (max-width: 560px) {
+      .brand span { display: none; }
+      .nav { gap: 10px; padding: 0 8px 0 14px; }
+      .nav nav { gap: 2px; }
+      .nav nav a { padding: 8px 10px; font-size: 12.5px; }
+    }
+
+    /* ---------------- page header ---------------- */
+    /* longhands: the padding shorthand here would zero out the horizontal
+       padding .shell provides, leaving the huge title flush against the
+       viewport edge on narrow screens */
+    .page-head { padding-top: 74px; padding-bottom: 56px; }
+    .page-head h1 {
+      margin: 0 0 20px; font-weight: 500; letter-spacing: -.04em; line-height: 1;
+      font-size: clamp(3rem, 9vw, 7rem);
+    }
+    /* background-clip: text paints only inside the element's box, so an
+       italic descender (the p in "shipped") falls outside it and renders
+       transparent. The padding grows the box past the descender; the
+       negative margin gives the space back to the layout. */
+    .page-head h1 em {
+      font-style: italic; font-weight: 500;
+      background: linear-gradient(100deg, var(--violet), #d9c9ff 70%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      line-height: 1.15; display: inline-block;
+      /* background-clip: text paints only inside the element's box. An italic
+         run overhangs its advance width on the last glyph and drops below the
+         baseline, so both edges need slack or the final letter is sliced
+         (the d in "made" was rendering as an a). The negative margins hand
+         the space back to the layout. */
+      padding-bottom: .18em; margin-bottom: -.14em;
+      padding-right: .16em; margin-right: -.16em;
+    }
+    .page-head p { margin: 0; color: var(--muted); max-width: 54ch; font-size: 1.06rem; }
+    @media (max-width: 700px) { .page-head { padding-top: 48px; padding-bottom: 36px; } }
+
+    /* ---------------- sticky stack: the three live sites ----------------
+       A real stack: each panel pins under the one before it with a growing
+       top offset, so the deck builds as you scroll. */
+    .stack { display: grid; gap: 26px; }
+    /* Scroll room for the deck to finish assembling. It has to be a real child,
+       not padding on .stack: a sticky element is constrained by its containing
+       block's CONTENT box, and padding sits outside that, so padding-bottom
+       bought the cards no extra travel at all and the last one released before
+       it ever reached its pin. This spacer is inside the content box, so it is
+       scroll distance the assembled deck holds for. */
+    .stack-tail { height: 380px; }
+    /* the NO-KINGS band used to sit here; without it the last card ran
+       straight into the footer */
+    footer { margin-top: 0; }
+    /* No padding and no gap on the card itself: the shot bleeds to the card's
+       edges and the card's own radius clips it. Previously the card padded a
+       fixed 16:10 image while the text column was far shorter, which left
+       ~199px of dead air in every card. */
+    .stack-item {
+      position: sticky;
+      top: calc(96px + var(--i) * 20px);
+      display: grid; grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr);
+      align-items: stretch; overflow: hidden; padding: 0;
+    }
+    .stack-item .txt { padding: 56px 30px 34px 64px; align-self: center; }
+    /* Corner ribbon. The card already has overflow:hidden for the bleeding
+       screenshot, which is what crops the band's ends into a proper ribbon.
+       Not aria-hidden: "under construction" is real status, so it should be
+       announced, and it sits first in the card's reading order. */
+    /* Geometry note: a 45deg band across a right-angle corner is only visible
+       for a chord of about 1.41x its distance from that corner, so sitting it
+       tight in the corner clipped the label at both ends. Centred ~55px in on
+       both axes, the visible run is ~155px, which clears the ~117px label. */
+    .stack-item .wip {
+      position: absolute; top: 32px; left: -61px; z-index: 3;
+      width: 210px; padding: 6px 0; text-align: center;
+      transform: rotate(-45deg);
+      background: linear-gradient(90deg, var(--violet), var(--violet-2));
+      color: #0b0818;
+      font-family: var(--mono); font-size: 8px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      box-shadow: 0 6px 18px rgba(9, 6, 21, .5);
+    }
+    /* the two GitHub Pages sites serve no favicon at all, so these are
+       stand-in marks rather than real tab logos; Maison Duroc's croissant
+       is its actual favicon. Decorative, so aria-hidden. */
+    .stack-item .txt h2 .mark { margin-right: .4em; font-size: .82em; }
+    /* the chess emoji renders as a near-black glyph, which disappears on a
+       dark card. Inverting it gives a white pawn sitting at the same
+       brightness as the pie and the croissant. */
+    .stack-item .txt h2 .chess { filter: invert(1); font-size: .9em; }
+    .stack-item .txt h2 { margin: 0 0 6px; font-size: clamp(1.5rem, 2.6vw, 2.15rem); font-weight: 500; letter-spacing: -.025em; }
+    .stack-item .txt .host {
+      display: block; margin: 0 0 14px; font-family: var(--mono);
+      font-size: 11.5px; letter-spacing: .1em; color: var(--violet);
+    }
+    .stack-item .txt p { margin: 0 0 22px; color: var(--muted); max-width: 40ch; }
+    .go {
+      display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+      font-size: 13px; font-weight: 500; color: var(--fg); white-space: nowrap;
+      padding: 12px 22px; border-radius: var(--r-pill);
+      background: var(--glass); border: 1px solid var(--edge-2);
+      transition: background .3s, transform .25s cubic-bezier(.16,1,.3,1);
+    }
+    .go:hover { background: var(--glass-2); transform: translateY(-2px); }
+    .go:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; }
+    .go .arw { transition: transform .3s cubic-bezier(.16,1,.3,1); }
+    .go:hover .arw { transform: translateX(4px); }
+    /* fills the card's height instead of holding an aspect ratio, so the card
+       is sized by its text and there is no leftover column */
+    .stack-item .shot {
+      position: relative; overflow: hidden; border-left: 1px solid var(--edge);
+      background: #120e26; min-height: 260px;
+    }
+    /* absolute, not height:100%: the shot's height comes from the grid row,
+       which comes from the text, so a percentage height would be indefinite
+       and the image would fall back to its intrinsic size and drive the card
+       instead of filling it */
+    .stack-item .shot img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block;
+      transition: transform .7s cubic-bezier(.16,1,.3,1);
+    }
+    .stack-item:hover .shot img { transform: scale(1.03); }
+
+    /* cursor spotlight: the glass reacts to where you are on it */
+    /* No `position` here on purpose. This rule sits after .stack-item and has
+       the same specificity, so declaring position:relative silently beat the
+       cards' `position: sticky` - they never pinned, and their `top` showed up
+       as a permanent gap above the list. The only .spot elements are the
+       cards, which are already positioned, so ::after has its containing
+       block either way. */
+    .spot { isolation: isolate; }
+    .spot::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 0%), rgba(155,123,255,.16), transparent 70%);
+      opacity: 0; transition: opacity .4s;
+    }
+    .spot:hover::after { opacity: 1; }
+    @media (max-width: 900px) {
+      /* cards are not sticky here, so the assembly room is just dead space */
+      .stack-tail { height: 0; }
+      .stack-item { grid-template-columns: 1fr; position: static; }
+      .stack-item .txt { padding: 24px 22px 28px; }
+      .stack-item .shot { order: -1; border-left: 0; border-bottom: 1px solid var(--edge); aspect-ratio: 16 / 10; min-height: 0; }
+    }
+
+
+    /* ---------------- footer ---------------- */
+    footer { padding: 46px 0 50px; }
+    .foot-base {
+      display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap;
+      padding: 22px 26px; border-radius: var(--r-pill);
+      font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .foot-base a { color: var(--violet); text-decoration: none; }
+    .foot-base a:hover { color: var(--fg); }
+    .foot-base .mk { display: flex; align-items: center; gap: 12px; color: var(--fg); text-decoration: none; }
+    .foot-base .mk img { width: 30px; height: 30px; }
+
+    /* ---------------- reveal ---------------- */
+    .reveal { opacity: 0; transform: translateY(22px); }
+    .reveal.in {
+      opacity: 1; transform: none;
+      transition: opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1);
+      transition-delay: var(--d, 0ms);
+    }
+    /* ---------------- liquid metal rim ----------------
+       An iridescent specular edge that travels around the pill, after the
+       liquid-metal component on metal.jakubantalik.com. That one paints two
+       2D canvases per button; this is the CSS equivalent: a conic gradient
+       masked down to just the border ring, with a drop-shadow so the bright
+       part blooms outward the way the reference does.
+       --metal has to be registered with @property: an unregistered custom
+       property is not interpolatable, so the sweep would snap rather than
+       travel. Without @property support the rim still renders, just static. */
+    @property --metal {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
+    }
+    .btn, .go { position: relative; }
+    .btn::before, .go::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      padding: 1.5px; pointer-events: none;
+      background: conic-gradient(from var(--metal),
+        transparent 0deg,
+        rgba(255, 255, 255, .95) 16deg,
+        #f769ad 30deg,
+        #9b7bff 48deg,
+        rgba(150, 225, 255, .9) 62deg,
+        transparent 92deg,
+        transparent 186deg,
+        rgba(255, 255, 255, .6) 206deg,
+        #9b7bff 226deg,
+        transparent 262deg,
+        transparent 360deg);
+      /* keep only the ring: the border box minus the content box */
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      filter: drop-shadow(0 0 5px rgba(155, 123, 255, .5));
+      animation: metal-sweep 6s linear infinite;
+    }
+    @keyframes metal-sweep { to { --metal: 360deg; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      /* hold the rim still, but keep it */
+      .btn::before, .go::before { animation: none; }
+      html { scroll-behavior: auto; }
+      .reveal, .reveal.in { opacity: 1; transform: none; transition: none; }
+      .aurora i { animation: none; }
+      .go, .spot::after, .stack-item .shot img { transition: none; }
+    }
   </style>
 </head>
 <body>
-  <img src="/logo.svg" alt="Sharpunk logo">
-  <h1>Sharpunk</h1>
-  <p class="tag">WEB</p>
-  <ul>
-    <li>
-      <a href="https://sharpmox.github.io/NO-KINGS/codex" target="_blank" rel="noopener">NO KINGS</a>
-      <small>Codex for the NO-KINGS card game</small>
-    </li>
-    <li>
-      <a href="https://sharpmox.github.io/color-pie/" target="_blank" rel="noopener">COLOR PIE</a>
-      <small>MTG Color pie breakdown</small>
-    </li>
-    <li>
-      <a href="https://maison-duroc.fr/" target="_blank" rel="noopener">MAISON DUROC</a>
-      <small>Maison Duroc's official Bakery website</small>
-    </li>
-  </ul>
-  <a class="back" href="/">← BACK</a>
+  <div class="aurora" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+  <div class="veil" aria-hidden="true"></div>
+
+  <header>
+    <div class="nav glass">
+      <a class="brand" href="/"><img src="/logo.svg" alt=""><span>Sharpunk</span></a>
+      <nav>
+        <a href="/web/" aria-current="page">Web</a>
+        <a href="/games/">Games</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="shell page-head">
+      <h1 class="reveal">Websites we<br><em>delivered</em></h1>
+      <p class="reveal" style="--d:90ms">Three live sites. All static pages.</p>
+    </div>
+
+    <div class="shell">
+      <div class="stack">
+        <article class="stack-item glass spot" style="--i:0">
+          <span class="wip">Under construction</span>
+          <div class="txt">
+            <h2><span class="mark chess" aria-hidden="true">♟️</span>NO KINGS Codex</h2>
+            <span class="host">sharpmox.github.io/NO-KINGS/codex</span>
+            <p>A filterable reference for the 38 pieces used across the NO-KINGS card game, with a move diagram and Betza notation for each one.</p>
+            <a class="go" href="https://sharpmox.github.io/NO-KINGS/codex" target="_blank" rel="noopener">Visit <span class="arw">&rarr;</span></a>
+          </div>
+          <div class="shot"><img src="/shots/no-kings.webp" alt="The NO-KINGS Codex, a filterable piece reference" loading="lazy"></div>
+        </article>
+
+        <article class="stack-item glass spot" style="--i:1">
+          <span class="wip">Under construction</span>
+          <div class="txt">
+            <h2><span class="mark" aria-hidden="true">🥧</span>Color Pie</h2>
+            <span class="host">sharpmox.github.io/color-pie</span>
+            <p>Magic's five-colour philosophy laid out side by side, filterable by effect, so you can see what each colour is actually allowed to do.</p>
+            <a class="go" href="https://sharpmox.github.io/color-pie/" target="_blank" rel="noopener">Visit <span class="arw">&rarr;</span></a>
+          </div>
+          <div class="shot"><img src="/shots/color-pie.webp" alt="Color Pie, a Magic colour philosophy breakdown" loading="lazy"></div>
+        </article>
+
+        <article class="stack-item glass spot" style="--i:2">
+          <span class="wip">Under construction</span>
+          <div class="txt">
+            <h2><span class="mark" aria-hidden="true">🥐</span>Maison Duroc</h2>
+            <span class="host">maison-duroc.fr</span>
+            <p>Storefront for an artisan bakery and patisserie in Asnieres-sur-Seine, with the full product range, opening hours and contact details.</p>
+            <a class="go" href="https://maison-duroc.fr/" target="_blank" rel="noopener">Visit <span class="arw">&rarr;</span></a>
+          </div>
+          <div class="shot"><img src="/shots/maison-duroc.webp" alt="Maison Duroc, an artisan bakery storefront" loading="lazy"></div>
+        </article>
+        <div class="stack-tail" aria-hidden="true"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="shell">
+      <div class="foot-base glass">
+        <a class="mk" href="/"><img src="/logo.svg" alt=""> Sharpunk</a>
+        <a href="mailto:sharpunk.soft@gmail.com">sharpunk.soft@gmail.com</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const io = new IntersectionObserver(es => {
+        for (const e of es) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      }, { threshold: 0, rootMargin: '0px 0px -7% 0px' });
+      document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+      /* An instant jump moves an element from below the viewport to above it
+         without ever being intersecting, so the observer never fires. Sweep
+         anything already at or above the fold. */
+      const sweep = () => document.querySelectorAll('.reveal:not(.in)').forEach(el => {
+        if (el.getBoundingClientRect().top < innerHeight) { el.classList.add('in'); io.unobserve(el); }
+      });
+      addEventListener('load', sweep);
+      addEventListener('hashchange', () => setTimeout(sweep, 700));
+      if ('onscrollend' in window) addEventListener('scrollend', sweep);
+
+      /* Click a card to bring it fully into view. In a stacked deck the cards
+         below are partly covered, so clicking one scrolls to the exact point
+         where it has just pinned and nothing overlaps it yet. Links inside the
+         card are left alone so Visit still navigates. */
+      const reduce0 = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.querySelectorAll('.stack-item').forEach((card, i) => {
+        card.addEventListener('click', e => {
+          if (e.target.closest('a')) return;
+          // offsetTop on a sticky element reports where it is stuck, not where
+          // it sits in flow, so read the flow position with sticky switched off
+          const prev = card.style.position;
+          card.style.position = 'static';
+          const flowTop = card.getBoundingClientRect().top + scrollY;
+          card.style.position = prev;
+          // below 900px the cards are static, so `top` is auto: fall back to the
+          // pin distance so the card does not land under the sticky nav
+          const pin = parseFloat(getComputedStyle(card).top) || 96;
+          scrollTo({ top: Math.max(0, flowTop - pin), behavior: reduce0 ? 'auto' : 'smooth' });
+        });
+      });
+
+      /* cursor spotlight on the glass panels (feedback). Two custom
+         properties, rAF-throttled, no layout thrash. */
+      if (!reduce) {
+        let queued = false, pending = null;
+        const paint = () => {
+          queued = false;
+          if (!pending) return;
+          const { el, x, y } = pending;
+          el.style.setProperty('--mx', x + 'px');
+          el.style.setProperty('--my', y + 'px');
+        };
+        document.querySelectorAll('.spot').forEach(el => {
+          el.addEventListener('pointermove', e => {
+            const r = el.getBoundingClientRect();
+            pending = { el, x: e.clientX - r.left, y: e.clientY - r.top };
+            if (!queued) { queued = true; requestAnimationFrame(paint); }
+          });
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

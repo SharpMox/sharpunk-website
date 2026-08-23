@@ -3,762 +3,707 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sharpunk</title>
-  <meta name="description" content="Sharpunk — web & games studio. Play the shark runner while you're here.">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <title>Sharpunk - Liquid Chrome</title>
+  <meta name="description" content="Sharpunk, a small web and games studio. Websites, games, and a shark that will not stop swimming.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
   <style>
-    :root { --accent: #5a1a8f;     /* the shark's body purple, sampled from the art */
-            --k: 1; }              /* game strip scale, driven by the media queries below */
-    /* Single-screen app grid: one 100dvh frame, named areas per breakpoint,
-       nothing position:fixed. The strip row is the strip's SCALED height, so
-       the rows always sum to the viewport. overflow:clip because two items
-       deliberately overhang the frame: the logo's corner bleed and the
-       scaled strip's unscaled 100vw/k layout box. */
+    /* ============================================================
+       SHARPUNK / LIQUID CHROME - home
+       Two full-viewport screens that snap: the presentation, then the
+       shark strip. One wheel gesture moves a whole screen.
+       Dials: DESIGN_VARIANCE 8 - MOTION_INTENSITY 7 - VISUAL_DENSITY 3
+       Accent locked to the brand's own violet. This is a deliberate
+       purple palette because the brand is purple, not an AI default.
+       Glass here is a web approximation (backdrop-filter + layered
+       borders + highlights), not Apple's Liquid Glass material.
+       Radius rule: interactive controls are full pill, panels 24px.
+       Theme: dark, locked (the brand has no light mode).
+       ============================================================ */
+
+    @font-face {
+      font-family: 'Outfit'; src: url(/fonts/outfit.woff2) format('woff2');
+      font-weight: 100 900; font-display: swap;
+    }
+    @font-face {
+      font-family: 'JetBrains Mono'; src: url(/fonts/jetbrains-mono.woff2) format('woff2');
+      font-weight: 100 800; font-display: swap;
+    }
+
+    :root {
+      --bg:      #090615;
+      --violet:  #9b7bff;
+      --violet-2:#6d4ad6;
+      --fg:      #ece8fb;
+      --muted:   #9d95bd;
+      --glass:   rgba(255, 255, 255, .055);
+      --glass-2: rgba(255, 255, 255, .085);
+      --edge:    rgba(255, 255, 255, .11);
+      --edge-2:  rgba(255, 255, 255, .19);
+      --r-panel: 24px;
+      --r-pill:  999px;
+      --shell:   1340px;
+      --strip:   300px;
+      /* the colour the strip's own background gradient starts on: the
+         section above fades into exactly this so the seam disappears */
+      --strip-top: #16113a;
+      --display: 'Outfit', system-ui, sans-serif;
+      --mono:    'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    /* ---------------- the snap container ----------------
+       scroll-snap-type lives on the root, so the viewport is the snap
+       container and native scroll restoration, fragment links, Home/End
+       and the mobile URL bar all keep working.
+       body MUST be overflow-x: clip, not hidden: hidden on one axis
+       computes the other to auto, which would make body a scroll
+       container that never scrolls, and snap points would resolve
+       against it instead of the viewport. Snapping would silently
+       do nothing at all. */
+    html {
+      scroll-behavior: smooth;
+      overflow-x: clip;
+      scroll-snap-type: y mandatory;
+    }
+    html.no-snap { scroll-snap-type: none; }
+
     body {
-      margin: 0;
-      height: 100dvh;
-      overflow: clip;
-      box-sizing: border-box;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      grid-template-rows: auto 1fr auto calc(250px * var(--k));
-      grid-template-areas:
-        "logo main"
-        "logo ."
-        "hud  hud"
-        "game game";
-      background: linear-gradient(160deg, #08060f 0%, #241a5e 45%, #5b2ea6 80%, #3ddc68 130%);
-      color: #f2f2f2;
-      font-family: system-ui, sans-serif;
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: var(--display); font-size: 16px; line-height: 1.65; font-weight: 300;
+      -webkit-font-smoothing: antialiased; overflow-x: clip;
     }
-    main { grid-area: main; text-align: right; font-family: ui-monospace, monospace;
-           min-width: 0; padding: 50px 50px 0 20px; }
-    img {
-      /* height cap folded into width (art ratio 267.3:236.4 = 1.13) so the box
-         always hugs the art — keeps the rotation axis on the art's center */
-      --lw: max(135px, min(88vw, 682px, calc((100dvh - 350px) * 1.13)));
-      grid-area: logo; z-index: -1;
-      width: var(--lw);
-      /* corner bleed as negative margins: the logo column's track sizes to
-         the visible 70%, and body's overflow:clip eats the rest */
-      margin: calc(var(--lw) * -0.3) 0 0 calc(var(--lw) * -0.3);
-      animation: spin 240s linear infinite;
+    a { color: inherit; }
+    ::selection { background: var(--violet); color: #0b0818; }
+    .shell { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 26px; }
+    @media (max-width: 640px) { .shell { padding: 0 18px; } }
+
+    /* min-height, not height: an over-tall screen must be able to grow, or
+       the snap gate below cannot measure the overflow. --screen-h is pinned
+       from JS so the mobile URL bar cannot move the snap targets mid-flick;
+       it falls back to plain dvh with no JS. */
+    .screen {
+      min-height: var(--screen-h, 100dvh);
+      scroll-snap-align: start;
+      scroll-snap-stop: always;   /* this is what makes one gesture = one screen */
+      position: relative; z-index: 2;
     }
-    @keyframes spin { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
+
+    /* ---------------- aurora field ---------------- */
+    .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .aurora i {
+      position: absolute; display: block; border-radius: 50%;
+      filter: blur(90px); opacity: .55; will-change: transform;
+    }
+    .aurora .b1 { width: 56vw; height: 56vw; left: -12vw; top: -14vw;
+                  background: radial-gradient(circle, #5b2ea6, transparent 68%);
+                  animation: drift1 28s ease-in-out infinite; }
+    .aurora .b2 { width: 48vw; height: 48vw; right: -10vw; top: 12vh;
+                  background: radial-gradient(circle, #3a2a8f, transparent 66%);
+                  animation: drift2 34s ease-in-out infinite; }
+    .aurora .b3 { width: 44vw; height: 44vw; left: 24vw; bottom: -18vw;
+                  background: radial-gradient(circle, #7a3f9e, transparent 70%);
+                  animation: drift3 40s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); }
+                        50%     { transform: translate3d(8vw, 6vh, 0) scale(1.14); } }
+    @keyframes drift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.08); }
+                        50%     { transform: translate3d(-7vw, 9vh, 0) scale(.92); } }
+    @keyframes drift3 { 0%,100% { transform: translate3d(0,0,0) scale(.96); }
+                        50%     { transform: translate3d(6vw, -8vh, 0) scale(1.1); } }
+    .veil { position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 0%, transparent, var(--bg) 78%); }
+
+    /* ---------------- glass primitive (web approximation) ---------------- */
+    .glass {
+      background: linear-gradient(150deg, var(--glass-2), var(--glass));
+      border: 1px solid var(--edge);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 24px 60px rgba(6, 4, 16, .55);
+      backdrop-filter: blur(22px) saturate(150%);
+      -webkit-backdrop-filter: blur(22px) saturate(150%);
+      border-radius: var(--r-panel);
+    }
+    @media (prefers-reduced-transparency: reduce) {
+      .glass { background: #14102a; backdrop-filter: none; -webkit-backdrop-filter: none; }
+    }
+
+    /* ---------------- nav ----------------
+       fixed, not sticky: sticky participates in flow, so its height would
+       offset every snap point below it. Out of flow means the snap points
+       land exactly on 0 and 1 screen, whatever the nav measures. */
+    header {
+      position: fixed; top: 16px; left: 0; right: 0;
+      z-index: 40; padding: 0 26px;
+      pointer-events: none;          /* the transparent band must not eat hero clicks */
+    }
+    .nav {
+      pointer-events: auto;
+      max-width: var(--shell); margin: 0 auto; height: 62px;
+      display: flex; align-items: center; gap: 26px; padding: 0 12px 0 18px;
+      border-radius: var(--r-pill);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; margin-right: auto; }
+    .brand img { width: 30px; height: 30px; }
+    .brand span { font-weight: 700; letter-spacing: .18em; font-size: 14px; text-transform: uppercase; }
+    .nav nav { display: flex; gap: 8px; }
+    .nav nav a {
+      text-decoration: none; font-size: 13px; color: var(--muted); font-weight: 500;
+      padding: 8px 14px; border-radius: var(--r-pill);
+      transition: background .3s cubic-bezier(.16,1,.3,1), color .3s;
+    }
+    .nav nav a:hover, .nav nav a:focus-visible { color: var(--fg); background: var(--glass-2); }
+    @media (max-width: 560px) {
+      .brand span { display: none; }
+      .nav { gap: 10px; padding: 0 8px 0 14px; }
+      .nav nav { gap: 2px; }
+      .nav nav a { padding: 8px 10px; font-size: 12.5px; }
+    }
+
+    /* ---------------- screen one: the presentation ---------------- */
+    .s1 { display: grid; align-items: center; padding: 92px 0 40px; }
+    .hero {
+      display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
+      gap: 48px; align-items: center;
+    }
+
+    /* the wordmark, each line sized to fill the column on its own so neither
+       wraps. The figures come from measuring the two strings in Outfit at
+       this weight and tracking. */
     h1 {
-      letter-spacing: 0.3em; text-transform: uppercase; margin: 0 0 0.5rem;
-      /* 8.5vw only bites below ~750px viewport; desktop stays at 4rem */
-      font-size: clamp(1.6rem, 8.5vw, 4rem); color: #564b9c;
-      -webkit-text-stroke: 6px #a2d741;
-      paint-order: stroke fill; /* stroke behind fill = outline sits outside the letters */
+      margin: 0 0 34px; font-weight: 700; letter-spacing: -.045em; line-height: .92;
+      --wm: 9.4vw;                      /* two-column hero */
     }
-    p { color: #a2d741; margin: 0; }
-    main a {
-      display: inline-block; margin-top: 1.5rem; padding: 10px 22px;
-      background: linear-gradient(135deg, #241a5e, #5b2ea6);
-      border: 2px solid #a2d741; border-radius: 8px;
-      color: #a2d741; text-decoration: none; letter-spacing: 0.15em;
-    }
-    main a:hover { filter: brightness(1.2); }
-    main a + a { margin-left: 10px; }
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0); }
-      25%      { transform: translate(2px, -4px); }
-      50%      { transform: translate(-2px, -6px); }
-      75%      { transform: translate(-3px, -2px); }
-    }
-    main a { animation: float 7s ease-in-out infinite; }
-    @media (prefers-reduced-motion: reduce) { main a, img { animation: none; } }
+    @media (max-width: 960px) { h1 { --wm: 16.2vw; } }   /* single column: full shell */
+    @media (min-width: 1392px) { h1 { --wm: 135px; } }   /* shell capped, vw would overrun */
+    h1 .line { display: block; white-space: nowrap; text-transform: uppercase; }
+    h1 .l1 { font-size: var(--wm); }
+    /* 0.808 = the ratio of the two strings' set widths, so both lines render
+       to the same measure instead of one falling short */
+    h1 .l2 { font-size: calc(var(--wm) * .808); }
 
-    /* shark game strip — the one place absolute positioning survives: it's a
-       game canvas, sprites move per-frame in its 250px coordinate system.
-       The grid row is calc(250px * --k); this box stays 250 tall and, when
-       scaled, bottom-anchors so scale(--k) lands exactly on the row. */
-    #game {
-      grid-area: game; align-self: end; justify-self: start;
-      position: relative; width: 100%; height: 250px;
-      overflow: hidden; touch-action: none; user-select: none;
+    /* ---------------- the wordmark glitch ----------------
+       At rest: one violet copy sitting BEHIND the word with a small offset,
+       like a misregistered print. z-index -1 is what puts it behind; with the
+       copy on top it would simply cover the white text, and clipping it to a
+       band (the old approach) read as the word being cropped.
+       In motion: a 45s loop that is idle almost all of the time, with two
+       bursts. steps(1) throughout, so every change is a hard jump rather than
+       a slide, which is what makes it read as digital tearing. */
+    .ghost { position: relative; display: inline-block; }
+    .ghost::before, .ghost::after {
+      content: attr(data-text); position: absolute; inset: 0;
+      pointer-events: none; z-index: -1;
+      /* The resting offset lives in `translate`, NOT in `transform`. The
+         keyframes below own `transform`, and a running animation outranks a
+         plain :hover rule for the same property, so putting the offset in
+         transform is what silently killed the hover. They are separate
+         properties and compose, so both work at once. */
+      translate: -.018em -.022em;
+      transition: translate .3s cubic-bezier(.16,1,.3,1), color .3s;
     }
-    #water {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 90px;
-      background: rgba(61, 140, 220, 0.35);
-      border-top: 2px solid rgba(160, 215, 255, 0.6);
-      z-index: 1;
+    .ghost::before {
+      color: var(--violet);
+      animation: glitch-slice 9s steps(1, end) infinite;
     }
-    /* --- sprites (sheets are @2x, sized here in logical px) ---
-       Animated sheets are horizontal strips of equal cells. `background-size:
-       auto 100%` makes one cell exactly the element's width, so the keyframes
-       just walk background-position-x by whole cells.
-       steps(n, jump-none) is deliberate: it lands on both the FIRST and LAST
-       cell, so `forwards` holds the real final frame. Plain steps() would
-       finish one cell past the end of the strip (i.e. on nothing). */
-    /* longhands, not the `background` shorthand: this rule outranks the
-       per-asset .island/.cloud/... classes, and the shorthand would reset
-       their background-image back to none */
-    #game .sprite, #game .decor, #game .part {
-      position: absolute;
-      background-repeat: no-repeat; background-position: 0 0; background-size: 100% 100%;
+    /* the pink copy only exists inside the chromatic burst */
+    .ghost::after {
+      color: #f769ad; opacity: 0;
+      translate: .018em -.022em;
+      animation: glitch-split 9s steps(1, end) infinite;
     }
-    #game .decor { pointer-events: none; }
-    #game .sprite { z-index: 2; }
-    /* zero-size anchor; parts hang off it. Same z as #water but appended
-       later, so the whole pile paints in front of the blue box (rocks were
-       unreadable through the tint) yet stays under the shark (z2). */
-    #game .pile { width: 0; height: 0; z-index: 1; }
+    .ghost:hover::before { translate: -.055em -.05em; color: #c6b4ff; }
+    .ghost:hover::after  { translate: .055em -.05em; }
+    /* the word itself shakes during a burst, so the white text moves too
+       rather than sitting still behind a moving ghost */
+    .ghost { animation: glitch-shake 9s steps(1, end) infinite; }
+    /* the two lines tear out of phase so it does not look scripted */
+    h1 .l2.ghost, h1 .l2.ghost::before, h1 .l2.ghost::after { animation-delay: -.6s; }
 
-    /* #game prefix needed: the shared `.sprite`/`.decor` rule above is (1,1,0)
-       and would otherwise win, squashing the whole strip into one cell */
-    #game #shark {
-      width: 93px; height: 75px;
-      background-image: url(img/sharkswim.webp); background-size: auto 100%;
-      transform: scaleX(-1);               /* art faces left; flip to swim right */
-      animation: swim .34s steps(2) infinite;
+    /* 9s loop, idle almost all of it, so a burst is never far away.
+       Variant A at 22% (2.0s in, ~0.3s): tight horizontal slice tearing.
+       Variant B at 62% (5.6s in, ~0.3s): violet left, pink right.
+       Offsets stay small on purpose: the tell is the hard step between
+       frames, not how far anything travels. */
+    @keyframes glitch-slice {
+      0%, 21.9% { transform: none; clip-path: none; }
+      22%   { transform: translate3d(-.045em, -.006em, 0); clip-path: inset(4%  0 78% 0); }
+      22.6% { transform: translate3d( .05em,   .005em, 0); clip-path: inset(30% 0 52% 0); }
+      23.2% { transform: translate3d(-.052em, -.008em, 0); clip-path: inset(52% 0 30% 0); }
+      23.8% { transform: translate3d( .036em,  .007em, 0); clip-path: inset(70% 0 12% 0); }
+      24.4% { transform: translate3d(-.028em, -.004em, 0); clip-path: inset(16% 0 66% 0); }
+      25%   { transform: translate3d( .044em,  .003em, 0); clip-path: inset(44% 0 40% 0); }
+      25.5%, 61.9% { transform: none; clip-path: none; }
+      62%   { transform: translate3d(-.058em, 0, 0); clip-path: none; }
+      62.8% { transform: translate3d(-.07em,   .005em, 0); }
+      63.6% { transform: translate3d(-.04em,  -.005em, 0); }
+      64.4%, 100% { transform: none; }
     }
-    /* must also carry the #game prefix, or the base rule above outranks them */
-    #game #shark.jump { background-image: url(img/sharkjump.webp); animation: a-jump .73s steps(9, jump-none) forwards; }
-    #game #shark.dive { background-image: url(img/sharkdive.webp); animation: a-dive .2s  steps(5, jump-none) forwards; }
-    #game #shark.surf { background-image: url(img/sharkdive.webp); animation: a-surf .15s steps(3, jump-none) forwards; }
-    /* death is two phases off one 7-cell sheet: the shark flips once (cells
-       0-3), then fish circle its head forever (cells 4-6). The orbit is
-       declared with a delay equal to the flip's length — during that delay it
-       has no fill, so the flip applies; once it starts it wins, being later
-       in the list. No JS handoff needed. */
-    #game #shark.dead {
-      background-image: url(img/sharkdead.webp);
-      animation: a-dead .52s steps(4, jump-none) forwards,
-                 a-deadloop .39s steps(3) infinite .52s;
+    @keyframes glitch-split {
+      0%, 21.9% { opacity: 0; transform: none; clip-path: none; }
+      /* the pink layer tears on the opposite bands */
+      22.3% { opacity: .9; transform: translate3d(.046em,  .005em, 0); clip-path: inset(22% 0 60% 0); }
+      23.5% { opacity: .9; transform: translate3d(-.04em, -.004em, 0); clip-path: inset(58% 0 24% 0); }
+      24.7% { opacity: .9; transform: translate3d(.05em,   .004em, 0); clip-path: inset(38% 0 46% 0); }
+      25.5%, 61.9% { opacity: 0; transform: none; clip-path: none; }
+      62%   { opacity: .95; transform: translate3d(.058em, 0, 0); }
+      62.8% { opacity: .95; transform: translate3d(.07em, -.005em, 0); }
+      63.6% { opacity: .95; transform: translate3d(.04em,  .005em, 0); }
+      64.4%, 100% { opacity: 0; transform: none; }
     }
-    /* cell = 93px; dive is one 8-frame arc split into descend (f0-f4) and surface (f5-f7) */
-    @keyframes swim   { to { background-position-x: -186px } }
-    @keyframes a-jump { to { background-position-x: -744px } }
-    @keyframes a-dive { to { background-position-x: -372px } }
-    @keyframes a-surf { from { background-position-x: -465px } to { background-position-x: -651px } }
-    @keyframes a-dead { to { background-position-x: -279px } }           /* cells 0-3 */
-    @keyframes a-deadloop { from { background-position-x: -372px }        /* cells 4-6 */
-                            to   { background-position-x: -651px } }
-
-    /* bird renders at two sizes, so its cell width varies — carry it in --cw */
-    #game .bird { background-image: url(img/bird.webp); background-size: auto 100%;
-                  animation: fly 1.2s steps(3) infinite; }
-    @keyframes fly { to { background-position-x: calc(var(--cw) * -3) } }
-
-    .island { background-image: url(img/island.webp) }
-    .cloud  { background-image: url(img/cloud.webp) }
-    .cloud2 { background-image: url(img/cloud2.webp) }
-    .cloud3 { background-image: url(img/cloud3.webp) }
-    .coral  { background-image: url(img/coral.webp) }
-    .fish   { background-image: url(img/fish.webp); transform: scaleX(-1) }
-    .fish2  { background-image: url(img/fish2.webp) }
-    /* drawn bow-left; flipped so it sails into the oncoming shark */
-    .boat   { background-image: url(img/boat.webp); transform: scaleX(-1) }
-    .rock   { background-image: url(img/rock.webp) }
-    .rock2  { background-image: url(img/rock2.webp) }
-    /* obstacle art inline in the modal, so the instructions show the real thing */
-    /* ?hitbox overlay only */
-    .dbg { position: absolute; pointer-events: none; outline: 2px dashed rgba(255,255,255,.85); }
-    .dbg.box { outline-style: solid; outline-width: 3px; }
-    .dbg::after {
-      content: attr(data-l); position: absolute; top: 2px; left: 4px;
-      font: bold 12px/1.4 monospace; color: #fff; white-space: pre;
-      background: rgba(0,0,0,.75); padding: 1px 4px; border-radius: 3px;
+    @keyframes glitch-shake {
+      0%, 21.9% { transform: none; }
+      22.4% { transform: translate3d(.005em, 0, 0) skewX(-.9deg); }
+      23.4% { transform: translate3d(-.004em, 0, 0) skewX(.7deg); }
+      24.6% { transform: translate3d(.003em, 0, 0) skewX(-.45deg); }
+      25.5%, 61.9% { transform: none; }
+      62.4% { transform: translate3d(-.004em, 0, 0) skewX(.6deg); }
+      63.4% { transform: translate3d(.004em, 0, 0) skewX(-.6deg); }
+      64.4%, 100% { transform: none; }
     }
-    /* the readout IS its own panel — the chip would stack a second black box on it */
-    #dbghud::after { background: none; padding: 0; top: 6px; left: 8px; }
-    /* JS appends it to body; explicit placement overlays it on the top row */
-    #dbgbar {
-      grid-row: 1; grid-column: 1 / -1; align-self: start; z-index: 9;
-      background: #c0143c; color: #fff; font: bold 13px monospace;
-      padding: 4px 10px; letter-spacing: .1em;
-    }
-    /* reads as the <b> heading it replaced; the icons beside it link to ?hitbox too */
-    #hbody .obs { color: inherit; font-weight: bold; text-decoration: none; }
-    #hbody .obs:hover { text-decoration: underline; }
-    .ico { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.35em;
-           background-repeat: no-repeat; background-position: center; background-size: contain; }
-    /* HUD lives outside #game so it clears the strip's clouds — and so it
-       escapes the phone scale and stays full size. Credit on its own
-       line, pills right-aligned beneath it. */
-    #hud {
-      grid-area: hud; justify-self: end; z-index: 4;
-      display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
-      margin: 0 12px 12px 0; max-width: calc(100vw - 24px);
-    }
-    #hud div { display: flex; gap: 8px; }
-    #score, #msg, #mute, #info, #rot {
-      z-index: 4;
-      font-family: monospace; font-size: 17px; font-weight: bold; color: #fff; white-space: nowrap;
-      background: #f769ad; border: 2px solid #fff; /* logo pink */
-      padding: 6px 14px; border-radius: 6px; line-height: 21px;
-    }
-    #mute, #info { cursor: pointer; font-size: 15px; padding: 6px 10px; }
-    /* the one word each instruction pill is actually about */
-    .key { color: var(--accent); }
-    /* current score leads, then a white divider, then the high score in purple.
-       The bar is a pseudo-element so it keeps the white regardless of the
-       purple it separates. */
-    #hiscore { color: var(--accent); }
-    #hiscore::before { content: "|"; color: #fff; margin: 0 10px; }
-    #help {
-      background: #f769ad; color: #fff; border: 2px solid #fff; border-radius: 8px;
-      /* 17px matches the in-game instruction pills (#msg / #rot) */
-      font-family: monospace; font-size: 17px; font-weight: bold; padding: 0; line-height: 2;
-      outline: none;
-      /* bottom-aligned with a gap: the UA's `margin: auto` still centres it
-         horizontally, and `margin-top` stays auto so it's pushed all the way down */
-      margin-bottom: 24px;
-    }
-    /* flex column: ✕ row, death extras, the instruction block, retry row */
-    #hbody { padding: 24px 34px; display: flex; flex-direction: column; }
-    /* first flex row, tucked into the padding corner by negative margins */
-    #hx {
-      align-self: flex-end; margin: -16px -24px -4px 0; cursor: pointer;
-      background: none; border: none; color: #fff; font: bold 18px monospace; outline: none;
-    }
-    /* death-mode extras inside the help dialog (hidden until you die) */
-    /* Death header: the shark's fish-orbit loop on a white glow, then
-       GAME OVER and the score on one row beneath it. Padding is symmetric
-       now, so plain flex centering lands these on the card's true center. */
-    /* opaque, so the pink card doesn't bleed through behind the shark */
-    #deadart:not([hidden]) {
-      display: flex; align-items: center; justify-content: center;
-      width: 118px; height: 118px; border-radius: 50%;
-      align-self: center; margin: 0 0 8px;
-      background: #4464a2;
-      border: 2px solid #fff;
-    }
-    /* cell is exactly 93px at this height (sheet is 1302x150), so the loop
-       reuses a-deadloop's pixel keyframes as-is */
-    .deadico {
-      display: block; width: 93px; height: 75px;
-      background: url(img/sharkdead.webp) no-repeat; background-size: auto 100%;
-      animation: a-deadloop .39s steps(3) infinite;
-    }
-    /* plain text, same treatment as the other centred rows */
-    #dhead:not([hidden]) { display: block; margin: 0 0 10px; text-align: center; }
-    /* headings and calls-to-action in the shark's purple; "— SCORE 00000"
-       inherits the card's white so the number and its label read together */
-    #gameover, #retry, .lbl, #hbody .obs { color: var(--accent); }
-    /* plain text, not a control — inherits the dialog's font/colour.
-       The whole dialog body is the hit target instead (see hbody click handler). */
-    #retry:not([hidden]) { display: block; margin: 16px 0 0; text-align: center; }
-    #help::backdrop { background: rgba(8, 6, 15, 0.6); }
-    #song, #art {
-      font-family: monospace; font-size: 12px; color: #fff;
-      text-decoration: none;
-      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    #song:hover, #art:hover { text-decoration: underline; }
-    /* the pills live OUTSIDE #game now: grid items sharing the strip's area,
-       centered by the grid — so they also escape the phone scale */
-    #msg, #rot { grid-area: game; justify-self: center; align-self: start;
-                 height: fit-content; margin-top: 34px; z-index: 3; }
-    #msg { text-transform: uppercase; }
-    /* portrait-phone hint; off everywhere else, switched on in the media query below.
-       ponytail: no JS — #msg empties on start and refills when the death modal
-       is dismissed, so the sibling
-       rule hides the hint for exactly the duration of a run */
-    #rot { display: none; }
-    #msg:empty + #rot { display: none; }
-    #msg:empty { display: none; }
-
-    /* --- strip scaling ---
-       The strip is a fixed 250px tall, which is fine on a desktop but eats
-       82% of a real landscape phone (measured 805x304 once the URL bar takes
-       its cut), leaving 54px for a header+HUD that need ~133.
-
-       So it gets scaled rather than resized: --k drives transform: scale()
-       with a matching 1/k width, so the strip's INTERNAL coordinate system
-       stays exactly 250 tall with the waterline at 90. WATER, GRAV, JUMP_V
-       and every hitbox are expressed in those coordinates and are untouched.
-       Breakpoints are set so 250*k still leaves ~133px above the strip. */
-    @media (max-width: 700px)                              { :root { --k: .80 } }
-    @media (orientation: landscape) and (max-height: 500px) { :root { --k: .75 } }
-    @media (orientation: landscape) and (max-height: 330px) { :root { --k: .60 } }
-    @media (orientation: landscape) and (max-height: 290px) { :root { --k: .50 } }
-    /* applied only where a scale is actually set, so desktop keeps no
-       transform on #game at all. Width is a PERCENTAGE on purpose: a
-       definite 100vw/--k would inflate the fr tracks past the viewport
-       (specified sizes feed intrinsic track sizing; percentages resolve
-       after, and the strip's absolute innards contribute ~nothing). The
-       oversize box overhangs right; body's overflow:clip eats it. */
-    @media (max-width: 700px), (orientation: landscape) and (max-height: 500px) {
-      #game {
-        width: calc(100% / var(--k));
-        transform: scale(var(--k)); transform-origin: bottom left;
-      }
     }
 
-    /* narrow: one column — logo, title block, then the strip pinned by 1fr.
-       1000px, not 700: the logo column is height-driven (caps at 682px wide,
-       ~477px visible), so on tall windows the 4rem title needs ~1000px of
-       viewport before the two-column layout stops clipping the K */
-    @media (max-width: 1000px) {
-      body {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr auto calc(250px * var(--k));
-        grid-template-areas: "logo" "main" "." "hud" "game";
-      }
-      main { padding: 0 24px; }
-      img { --lw: max(135px, min(75vw, 682px, calc((100dvh - 420px) * 1.13))); }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 14px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+      font-size: 14px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      text-decoration: none; min-width: 132px;
+      padding: 16px 30px; border-radius: var(--r-pill); border: 1px solid transparent;
+      transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s;
+      will-change: transform;
+    }
+    /* PLAY leads, so it carries the solid weight. WEB and GAMES are the
+       matched glass pair behind it. */
+    .btn-primary {
+      background: linear-gradient(140deg, var(--violet), var(--violet-2));
+      color: #0b0818;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.34), 0 14px 34px rgba(109, 74, 214, .34);
+    }
+    .btn-ghost { background: var(--glass); border-color: var(--edge-2); color: var(--fg); }
+    .btn-ghost:hover { background: var(--glass-2); }
+    .btn:active { transform: scale(.98); }
+    .btn:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; }
+
+    .hero-art { position: relative; display: grid; place-items: center; padding: 20px; }
+    .hero-art .well {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: radial-gradient(circle at 50% 42%, rgba(155,123,255,.24), transparent 62%);
+    }
+    .hero-art img {
+      width: min(100%, 360px); position: relative;
+      filter: drop-shadow(0 30px 60px rgba(9, 6, 21, .8));
+      /* The mark's fins sweep past the disc, so the element box centre is not
+         the disc centre. Measured off the rendered alpha: the dense core sits
+         at 51.5% / 49.3%. Spinning about the box centre made it wobble. */
+      transform-origin: 51.5% 49.3%;
+      animation: orbit 180s linear infinite;
+    }
+    @keyframes orbit { from { transform: rotate(-40deg); } to { transform: rotate(320deg); } }
+
+    @media (max-width: 960px) {
+      .s1 { padding: 88px 0 32px; }
+      .hero { grid-template-columns: 1fr; gap: 26px; }
+      .hero-art { order: -1; padding: 0; }
+      .hero-art img { width: min(52%, 210px); }
+      h1 { margin-bottom: 26px; }
+      .btn { min-width: 0; flex: 1 1 auto; padding: 15px 20px; }
     }
 
-    /* portrait phones only: real hardware that can actually be rotated.
-       Hint takes the strip's top slot; the play prompt drops below it. */
-    @media (orientation: portrait) and (max-width: 700px) {
-      #rot { display: block; }
-      #msg { margin-top: 76px; }
+    /* ---------------- screen two: credits, score, strip ---------------- */
+    .s2 { display: grid; grid-template-rows: 1fr auto; }
+    /* fades from the page into the exact colour the strip's sky starts on,
+       so the two meet with no visible seam and no rule between them */
+    .s2-top {
+      display: grid;
+      background: linear-gradient(180deg,
+        rgba(22, 17, 58, 0) 30%,
+        rgba(22, 17, 58, .55) 74%,
+        var(--strip-top) 100%);
+    }
+    .s2-in {
+      display: grid; grid-template-rows: auto 1fr; min-width: 0;
+      /* longhands: the padding shorthand here would zero out the horizontal
+         padding .shell sets, and the content would run to the screen edge */
+      padding-top: 114px;     /* clears the floating nav */
+      padding-bottom: 64px;   /* keeps the score off the waterline */
     }
 
-    /* landscape phones: short viewport — cap title/logo by height so the
-       header stops crowding the content and the game strip */
-    @media (orientation: landscape) and (max-height: 500px) {
-      /* title + tagline + link on one row so the header clears the game strip */
-      main { padding: 12px 24px 0 0; display: flex; align-items: center;
-             justify-content: flex-end; flex-wrap: wrap; gap: 6px 20px; }
-      main h1, main a { margin: 0; }
-      h1 { font-size: min(7vw, 8vh); -webkit-text-stroke-width: 4px; }
-      /* only ~140px above the strip here; compact the HUD so the two credit
-         lines stop colliding with the header row */
-      #hud { gap: 3px; margin-bottom: 6px; }
-      #song, #art { font-size: 10px; }
-      #score, #mute, #info { font-size: 13px; padding: 4px 8px; line-height: 16px; }
-      /* the WEB/GAMES buttons are the tallest thing in the header row */
-      main a { padding: 5px 12px; font-size: 13px; }
-      img { --lw: max(110px, min(46dvh, 40vw)); }
+    /* not on a .glass surface on purpose: repainting a large numeral ~9x a
+       second on top of backdrop-filter forces the blur to re-sample every
+       one of those frames. tabular-nums keeps the advance fixed so the
+       digits never reflow, and contain bounds the invalidation. */
+    .readout {
+      align-self: center;
+      display: flex; flex-wrap: wrap; gap: 20px 72px;
+      contain: layout style paint;
+    }
+    .ro-k {
+      display: block; font-family: var(--mono); font-size: 11px;
+      letter-spacing: .28em; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .ro-n {
+      display: block; position: relative;
+      font-weight: 700; letter-spacing: -.03em; line-height: .9;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(3.2rem, 9vw, 7rem);
+    }
+    /* the wordmark's glitch, on the readout. The offsets are in em so the same
+       keyframes work at the wordmark's ~135px and at Best's ~40px.
+       No resting clip-path here either: a band that is always on reads as the
+       number being cropped rather than as a glitch. */
+    .ro-n::before, .ro-n::after {
+      content: attr(data-n); position: absolute; inset: 0;
+      pointer-events: none; z-index: -1;
+    }
+    .ro-n::before {
+      color: var(--violet); opacity: .85;
+      translate: -.012em -.016em;
+      animation: glitch-slice 9s steps(1, end) infinite;
+    }
+    .ro-n::after {
+      color: #f769ad; opacity: 0;
+      translate: .012em -.016em;
+      animation: glitch-split 9s steps(1, end) infinite;
+    }
+    /* Score and Best tear a beat apart */
+    #ro-best::before, #ro-best::after { animation-delay: -.4s; }
+    .ro-best .ro-n { font-size: clamp(2.2rem, 5.4vw, 4rem); }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; margin: -1px;
+      padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+
+    .credits {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px;
+      padding: 0 0 16px; border-bottom: 1px solid var(--edge);
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .credits a { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+    .credits a:hover { color: var(--violet); }
+    .credits a b { color: var(--fg); font-weight: 500; }
+    .credits .fill { margin-left: auto; }
+    @media (max-width: 960px) {
+      .s2-in { padding-top: 88px; }
+      .credits .fill { margin-left: 0; }
+      .readout { gap: 14px 40px; }
+    }
+
+    /* The slot keeps a fixed 250px height and the iframe is absolutely
+       positioned against its bottom edge. That is what lets the iframe grow
+       upward for a dialog without reflowing anything or moving the strip. */
+    .strip-slot { position: relative; height: var(--strip); }
+    .strip-slot > iframe {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      width: 100%; height: var(--strip); border: 0;
+      background: linear-gradient(180deg, var(--strip-top) 0%, #1e1749 55%, #140f30 100%);
+    }
+    /* binary and instant, never transitioned: while expanded the iframe
+       covers the credits, and the game's touch-action:none would block touch
+       scrolling over all of it */
+    .strip-slot.modal { z-index: 90; }
+    .strip-slot.modal > iframe { height: var(--modal-h, 100dvh); }
+
+    /* ---------------- liquid metal rim ----------------
+       An iridescent specular edge that travels around the pill, after the
+       liquid-metal component on metal.jakubantalik.com. That one paints two
+       2D canvases per button; this is the CSS equivalent: a conic gradient
+       masked down to just the border ring, with a drop-shadow so the bright
+       part blooms outward the way the reference does.
+       --metal has to be registered with @property: an unregistered custom
+       property is not interpolatable, so the sweep would snap rather than
+       travel. Without @property support the rim still renders, just static. */
+    @property --metal {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
+    }
+    .btn, .go { position: relative; }
+    .btn::before, .go::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      padding: 1.5px; pointer-events: none;
+      background: conic-gradient(from var(--metal),
+        transparent 0deg,
+        rgba(255, 255, 255, .95) 16deg,
+        #f769ad 30deg,
+        #9b7bff 48deg,
+        rgba(150, 225, 255, .9) 62deg,
+        transparent 92deg,
+        transparent 186deg,
+        rgba(255, 255, 255, .6) 206deg,
+        #9b7bff 226deg,
+        transparent 262deg,
+        transparent 360deg);
+      /* keep only the ring: the border box minus the content box */
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      filter: drop-shadow(0 0 5px rgba(155, 123, 255, .5));
+      animation: metal-sweep 6s linear infinite;
+    }
+    @keyframes metal-sweep { to { --metal: 360deg; } }
+    /* PLAY sits out; it already leads on colour and does not need the rim */
+    .btn-primary::before { content: none; }
+    /* GAMES runs the sweep out of phase with WEB so the pair does not read
+       as one repeated element. Not half a cycle: the gradient has bright
+       arcs roughly 180deg apart, so -3s would land back on itself. */
+    .cta-row a:nth-child(3)::before { animation-delay: -2.2s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      /* hold the rim still, but keep it */
+      .btn::before, .go::before { animation: none; }
+      /* the snap fling is UA-driven and is NOT governed by scroll-behavior,
+         so disabling snap is the only way to honour the preference */
+      html { scroll-behavior: auto; scroll-snap-type: none; }
+      .aurora i, .hero-art img { animation: none; }
+      /* keep the resting offsets, drop every burst */
+      .ghost, .ghost::before, .ro-n::before { animation: none; }
+      .ghost::after, .ro-n::after { animation: none; opacity: 0; }
+      .btn, .nav nav a { transition: none; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Sharpunk</h1>
-    <p>WEB &amp; GAMES</p>
-    <a href="/web">WEB</a>
-    <a href="/games" style="animation-delay: -3.5s">GAMES</a>
-  </main>
-  <img src="logo.svg" alt="Sharpunk logo">
+  <div class="aurora" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+  <div class="veil" aria-hidden="true"></div>
 
-  <div id="hud">
-    <a id="art" href="https://www.instagram.com/pelykhyul/" target="_blank" rel="noopener">✎ Artwork by @pelykhyul</a>
-    <a id="song" href="https://www.newgrounds.com/audio/listen/1459250" target="_blank" rel="noopener">♪ Sea Shanty 2 (OSRS Remix) — JizzyJazz</a>
-    <div>
-      <span id="score"><span id="cur"></span><span id="hiscore"></span></span>
-      <span id="mute">🔊</span>
-      <span id="info">ℹ️</span>
+  <header>
+    <div class="nav glass">
+      <a class="brand" href="/"><img src="/logo.svg" alt=""><span>Sharpunk</span></a>
+      <nav>
+        <a href="/web/">Web</a>
+        <a href="/games/">Games</a>
+      </nav>
     </div>
-  </div>
+  </header>
 
-  <div id="game">
-    <div id="water"></div>
-    <span id="shark" class="sprite"></span>
-    <dialog id="help">
-      <div id="hbody">
-        <button id="hx">✕</button>
-        <div id="deadart" hidden><i class="deadico"></i></div>
-        <b id="dhead" hidden><span id="gameover">GAME OVER</span> — SCORE <span id="dscore"></span></b>
-        <!-- one block, so the flex column doesn't blockify each inline chunk -->
+  <main>
+    <!-- SCREEN ONE -->
+    <section class="screen s1" aria-label="Sharpunk, web and games">
+      <div class="shell hero">
         <div>
-          <b class="lbl">CONTROLS</b><br>
-          ↑ / SPACE / TAP / SWIPE ↑ — Jump<br>
-          ↓ / SWIPE ↓ — Dive<br>
-          <a class="obs" href="?hitbox" title="show hitboxes">OBSTACLES</a><br>
-          <a class="ico boat" href="?hitbox" title="show hitboxes"></a> Dive under the boats<br>
-          <a class="ico rock" href="?hitbox" title="show hitboxes"></a> Jump over the rocks
+          <h1>
+            <span class="line l1 ghost" data-text="Sharpunk">Sharpunk</span>
+            <span class="line l2 ghost" data-text="Web &amp; Games">Web &amp; Games</span>
+          </h1>
+          <div class="cta-row">
+            <a class="btn btn-primary magnet" href="#play">Play</a>
+            <a class="btn btn-ghost" href="/web/">Web</a>
+            <a class="btn btn-ghost" href="/games/">Games</a>
+          </div>
         </div>
-        <div id="retry" hidden>JUMP TO RESTART</div>
+        <div class="hero-art">
+          <span class="well"></span>
+          <img src="/logo.svg" alt="The Sharpunk shark logo">
+        </div>
       </div>
-    </dialog>
-    <audio id="bgm" src="bgm.mp3" loop preload="none"></audio>
-    <audio id="oof" src="oof.mp3" preload="auto"></audio>
-  </div>
-  <!-- grid items overlaying the strip's area (adjacent: #msg:empty + #rot) -->
-  <span id="msg">↑ / tap to <span class="key">play</span></span>
-  <span id="rot">↻ <span class="key">ROTATE</span> FOR MORE ROOM</span>
+    </section>
+
+    <!-- SCREEN TWO -->
+    <section class="screen s2" id="play" aria-label="Play the shark runner">
+      <div class="s2-top">
+      <div class="shell s2-in">
+        <div class="credits">
+          <a href="https://www.instagram.com/pelykhyul/" target="_blank" rel="noopener">Artwork <b>@pelykhyul</b></a>
+          <a href="https://www.newgrounds.com/audio/listen/1459250" target="_blank" rel="noopener">Music <b>Sea Shanty 2 (OSRS Remix) by JizzyJazz</b></a>
+          <span class="fill"></span>
+          <span>Up / space / tap to jump</span>
+        </div>
+        <div class="readout" aria-hidden="true">
+          <div>
+            <span class="ro-k">Score</span>
+            <span class="ro-n" id="ro-score" data-n="00000">00000</span>
+          </div>
+          <div class="ro-best">
+            <span class="ro-k">Best</span>
+            <span class="ro-n" id="ro-best" data-n="00000">00000</span>
+          </div>
+        </div>
+        <p class="sr-only" id="ro-live" aria-live="polite"></p>
+      </div>
+      </div>
+
+      <div class="strip-slot" id="strip-slot">
+        <iframe id="shark-frame" src="/shark/?theme=chrome&amp;score=off&amp;h=300" title="Sharpunk shark runner game"></iframe>
+      </div>
+    </section>
+  </main>
 
   <script>
-    // Shark runner. Coordinate system: y = shark's offset from the waterline
-    // (px, positive = airborne, negative = submerged). Waterline = top of #water.
-    const WATER = 90, DIVE_Y = -48;
-    const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
-          curEl = document.getElementById('cur'), hiEl = document.getElementById('hiscore'),
-          msgEl = document.getElementById('msg'),
-          bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute'),
-          oof = document.getElementById('oof');
-    const W = () => game.clientWidth; // strip's coordinate width (125vw when scaled on phones)
-    // narrow screens: hug the left edge for maximum reaction time
-    const sharkX = () => W() < 625 ? 20 : Math.min(200, W() * 0.25);
-    let SHARK_X = sharkX();
-    addEventListener('resize', () => SHARK_X = sharkX());
+    (function () {
+      const docEl = document.documentElement;
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    muteEl.addEventListener('click', () => {
-      bgm.muted = !bgm.muted;
-      muteEl.textContent = bgm.muted ? '🔇' : '🔊';
-    });
-    const helpEl = document.getElementById('help'), infoEl = document.getElementById('info'),
-          retryEl = document.getElementById('retry'), dscoreEl = document.getElementById('dscore'),
-          deadartEl = document.getElementById('deadart'), dheadEl = document.getElementById('dhead');
-    // same dialog serves both roles: info (controls only) and death (adds GAME OVER + retry)
-    function openHelp(death) {
-      retryEl.hidden = deadartEl.hidden = dheadEl.hidden = !death;
-      // just the run's score, padded like the HUD's second number
-      if (death) dscoreEl.textContent = String(score | 0).padStart(5, '0');
-      if (!helpEl.open) helpEl.showModal(); // showModal throws if already open (info up when you die)
-    }
-    infoEl.addEventListener('click', () => openHelp(false));
-    // in death mode a tap/click anywhere in the dialog body counts as the jump;
-    // ✕ has its own handler and must only close
-    document.getElementById('hbody').addEventListener('click', e => {
-      // links (the obstacle icons open ?hitbox) must navigate, not restart
-      if (!retryEl.hidden && e.target.id !== 'hx' && !e.target.closest('a')) { helpEl.close(); start(); }
-    });
-    // clicks on the backdrop (outside #hbody) target the dialog itself
-    helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.close(); });
-    document.getElementById('hx').addEventListener('click', () => helpEl.close());
-    // the restart pill only appears once the death modal is dismissed — filling
-    // it in die() flashed it under the flip before the modal opened. The close
-    // event fires after a retry's start() too, hence the state check.
-    helpEl.addEventListener('close', () => {
-      if (state === 'dead') msgEl.textContent = 'GAME OVER — ↑ to restart';
-    });
-
-    let state = 'idle', y = 0, vy = 0, diving = false;
-    let score = 0, hi = +localStorage.sharkHi || 0, t = 0, obstacles = [];
-
-    // Hitboxes, as plain boxes. Shark's are relative to SHARK_X and its centre
-    // y; each obstacle's are relative to its own x and the waterline. y grows
-    // upward, so y1 is a box's top edge.
-    //
-    // All are deliberately tighter than the art. The shark sprite is 93x75
-    // where the old emoji glyph was ~40 square, and a true-to-art box kept an
-    // obstacle lethal for ~152px instead of ~115 — long enough that at
-    // mobile's 0.75x speed the shark landed or surfaced before clearing it.
-    //
-    // The rock is two boxes because it's a spike: a narrow tip above the
-    // surface, over a wider body below it. One box around the whole pile
-    // would kill you for passing beside the point.
-    //
-    // Load with ?hitbox to see these drawn, and tweak live from the console:
-    //   HIT.shark.x1 = 70        // takes effect on the next frame
-    const HIT = {
-      shark: { x0: 18, x1: 76, y0: -15, y1: 15 },
-      boat: [{ x0: 12, x1: 85, y0: -5, y1: 115 }],   // hull to masthead
-      rock: [{ x0: 18, x1: 45, y0:  0, y1:  22 },    // tip, above water
-             { x0:  8, x1: 58, y0: -60, y1:  0 }],   // body, submerged
-    };
-
-    // ponytail: frame-based physics like the original T-rex — no dt scaling,
-    // assumes ~60fps; switch to dt if high-refresh screens feel too fast
-    const GRAV = 0.5, JUMP_V = 11, BASE_SPEED = 6;
-
-    // natural width/height ratio of each sprite sheet, from tools/build-assets.py
-    const ASPECT = { island: 0.633, cloud: 2.188, cloud2: 1.438, cloud3: 1.979, bird: 1.458,
-                     coral: 0.813, fish: 1.583, fish2: 1.808, boat: 0.808, rock: 0.573, rock2: 0.445 };
-    function sprite(cls, h, kind) {
-      const el = document.createElement('span');
-      el.className = kind + ' ' + cls;
-      const w = Math.round(h * ASPECT[cls]);
-      el.style.width = w + 'px';
-      el.style.height = h + 'px';
-      if (cls === 'bird') el.style.setProperty('--cw', w + 'px'); // cell width for @keyframes fly
-      return el;
-    }
-
-    // the shark is the only thing that moves vertically, so it's the only
-    // thing that needs repositioning on both axes each frame
-    const SHARK_H = 75;
-    function placeShark() {
-      sharkEl.style.left = SHARK_X + 'px';
-      sharkEl.style.bottom = (WATER + y - SHARK_H / 2) + 'px';
-    }
-
-    // class swap drives the CSS animations; only write it on an actual change,
-    // otherwise every frame restarts the animation from frame 0
-    let sharkState = '';
-    function setShark(s) {
-      if (s !== sharkState) sharkEl.className = 'sprite' + (s ? ' ' + s : '');
-      sharkState = s;
-    }
-
-    function jump() {
-      if (state !== 'run') return start();
-      if (y <= 0 && !diving) vy = JUMP_V;
-    }
-
-    function start() {
-      if (state === 'dead' || state === 'idle') {
-        clearTimeout(deathTimer);
-        obstacles.forEach(o => o.el.remove());
-        obstacles = []; score = 0; y = 0; vy = 0; diving = false; state = 'run';
-        msgEl.textContent = ''; setShark('');
-        bgm.volume = 0.1; bgm.play(); // low volume; started from a user gesture
-      }
-    }
-
-    function spawn() {
-      const boat = Math.random() < 0.5;
-      let el;
-      if (boat) {
-        // sailboat floats with its hull just under the waterline — dive beneath it
-        el = sprite('boat', 120, 'sprite');
-        el.style.bottom = (WATER - 5) + 'px';
-      } else {
-        // main rock breaking the surface + smaller rocks piled beneath it,
-        // overflowing past the bottom of the strip — jump over it
-        el = document.createElement('span');
-        el.className = 'sprite pile';
-        el.style.bottom = '0px';
-        // top rock is the one that breaks the surface — its size and position
-        // are load-bearing for the hitbox, so only the two below it changed
-        for (const [c, h, b, l] of [['rock', 110, 0, 0], ['rock2', 100, -32, -20], ['rock', 110, -45, 28]]) {
-          const r = sprite(c, h, 'part');
-          r.style.bottom = b + 'px';
-          r.style.left = l + 'px';
-          el.appendChild(r);
+      /* ---- pin the screen height ----
+         100dvh changes while the mobile URL bar animates, which would move
+         the snap targets mid-flick. Only react to a width change or a height
+         delta bigger than any URL-bar animation. */
+      let lastW = innerWidth, lastH = innerHeight;
+      const setH = () => docEl.style.setProperty('--screen-h', innerHeight + 'px');
+      setH();
+      addEventListener('resize', () => {
+        if (Math.abs(innerWidth - lastW) > 0 || Math.abs(innerHeight - lastH) > 120) {
+          lastW = innerWidth; lastH = innerHeight; setH();
         }
-      }
-      game.appendChild(el);
-      // vertical position never changes, so it's set once here and only
-      // `left` is touched per frame
-      obstacles.push({ el, x: W() + 40, boat });
-    }
+      });
+      addEventListener('orientationchange', () => setTimeout(() => {
+        lastW = innerWidth; lastH = innerHeight; setH();
+      }, 320));
 
-    // parallax decor: seeded once, recycled by wrapping — no spawn/despawn.
-    // bg (islands/clouds/doves) drifts at 0.3x game speed behind the water;
-    // fg (coral/fish) at 1.5x in front of the game sprites.
-    const decor = [];
-    function seedDecor(defs, mult, z, opacity) {
-      for (const [cls, size, bottom] of defs) {
-        const el = sprite(cls, size, 'decor');
-        el.style.bottom = bottom + 'px';
-        el.style.zIndex = z;
-        if (opacity) el.style.opacity = opacity;
-        game.appendChild(el);
-        // clouds, birds and fish keep drifting while the game is paused; islands and coral don't
-        const ambient = ['cloud', 'cloud2', 'cloud3', 'bird', 'fish', 'fish2'].includes(cls);
-        decor.push({ el, x: Math.random() * W(), mult, ambient });
-      }
-    }
-    seedDecor([ // sky + horizon, behind the water
-      ['island', 60, WATER], ['island', 44, WATER],  /* mound base sits on the waterline */
-      ['cloud', 48, 190], ['cloud2', 36, 210], ['cloud3', 42, 170],
-    ], 0.3, 0, 0.55);
-    // birds share the sky layer but fly, so they cross 3x faster than the clouds drift
-    seedDecor([['bird', 24, 185], ['bird', 20, 205]], 0.9, 0, 0.55);
-    seedDecor([ // seabed + swimmers: behind the water, so they read as submerged
-      ['coral', 48, -14], ['coral', 38, -10], ['coral', 44, -16], ['coral', 36, -8],
-      ['fish', 24, 30], ['fish2', 26, 12], ['fish', 22, 44], ['fish2', 20, 20],
-    ], 1.5, 0);
-    decor.forEach(d => { d.el.style.left = d.x + 'px'; });
+      /* ---- snap gate ----
+         Mandatory snap forbids resting between snap points, so a screen taller
+         than the viewport would have an unreachable bottom band. Measure and
+         switch snapping off when that happens, rather than guessing with a
+         breakpoint. min-height on .screen is what makes the overflow visible
+         to getBoundingClientRect. */
+      const screens = [...document.querySelectorAll('.screen')];
+      let snapOff = false, deb = 0, settle = 0;
+      const OFF_AT = 8;   // must overflow by more than this to switch off
+      const ON_AT = 0;    // must fit exactly to come back on
 
-    let deathTimer = 0;
-    function die() {
-      state = 'dead';
-      hi = Math.max(hi, score); localStorage.sharkHi = hi;
-      bgm.pause();
-      oof.muted = bgm.muted; oof.currentTime = 0; oof.play();
-      // hold the dialog back until the shark has finished flipping, so the
-      // flip and the first fish orbit aren't covered. The state check matters:
-      // ↑ during this window restarts, and the dialog must not then open over
-      // a live game.
-      deathTimer = setTimeout(() => { if (state === 'dead') openHelp(true); }, 520);
-    }
-
-    function tick() {
-      t++;
-      if (state === 'run') {
-        score += 0.15;
-        // matches Chrome T-rex: start 6, accelerate ~0.001/frame, cap at 13
-        // ponytail: narrow screen = mobile; 25% slower there for thumb reaction time
-        const speed = Math.min(13, BASE_SPEED + score * 0.007) * (W() < 625 ? 0.75 : 1);
-
-        if (y > 0 || vy > 0) { y += vy; vy -= GRAV; if (y < 0 && !diving) { y = 0; vy = 0; } }
-        else y += ((diving ? DIVE_Y : 0) - y) * 0.3;
-
-        const last = obstacles[obstacles.length - 1];
-        if (!last || last.x < W() - (300 + Math.random() * 400 + speed * 40)) spawn();
-
-        // sail reaches all the way up (jumping always clips it); rock reaches
-        // all the way down (diving always hits it) — each has exactly one escape
-        const sx0 = SHARK_X + HIT.shark.x0, sx1 = SHARK_X + HIT.shark.x1,
-              sy0 = y + HIT.shark.y0,       sy1 = y + HIT.shark.y1;
-        for (const o of obstacles) {
-          o.x -= speed;
-          o.el.style.left = o.x + 'px'; // vertical position was fixed at spawn
-          for (const b of (o.boat ? HIT.boat : HIT.rock)) {
-            if (o.x + b.x0 < sx1 && o.x + b.x1 > sx0 && b.y0 < sy1 && b.y1 > sy0) { die(); break; }
-          }
+      function measure() {
+        const vh = docEl.clientHeight;
+        let tallest = 0;
+        for (const s of screens) {
+          const h = s.getBoundingClientRect().height;
+          if (h > tallest) tallest = h;
         }
-        obstacles = obstacles.filter(o => o.x > -60 || (o.el.remove(), false));
-
-        for (const d of decor) {
-          d.x -= speed * d.mult;
-          if (d.x < -100) d.x = W() + 100;
-          d.el.style.left = d.x + 'px';
-        }
-      } else {
-        for (const d of decor) {
-          if (!d.ambient) continue;
-          d.x -= 0.4 * d.mult; // slowest drift while paused
-          if (d.x < -100) d.x = W() + 100;
-          d.el.style.left = d.x + 'px';
-        }
-        if (state === 'idle') y = Math.sin(t / 20) * 4; // idle bob
+        const over = tallest - vh;
+        const next = snapOff ? over > ON_AT : over > OFF_AT;
+        if (next === snapOff) return;
+        snapOff = next;
+        docEl.classList.toggle('no-snap', snapOff);
       }
-      // pick the pose. `surf` covers the rise back to the surface after a dive:
-      // y eases toward 0 by 0.3/frame, so it clears -2 in ~9 frames (~150ms),
-      // which is what the .15s surface animation is timed to.
-      if (state === 'dead') setShark('dead');
-      else if (state !== 'run') setShark('');       // idle bob keeps swimming
-      else if (y > 0 || vy > 0) setShark('jump');
-      else if (diving) setShark('dive');
-      else if (y < -2) setShark('surf');
-      else setShark('');
-      placeShark();
-      curEl.textContent = String(score | 0).padStart(5, '0');
-      hiEl.textContent = String(hi | 0).padStart(5, '0');
-      requestAnimationFrame(tick);
-    }
-
-    addEventListener('keydown', e => {
-      if (helpEl.open) {
-        // death modal: a jump key retries; the info modal ignores game keys
-        if (!retryEl.hidden && (e.code === 'ArrowUp' || e.code === 'Space')) {
-          e.preventDefault(); helpEl.close(); start();
-        }
-        return;
+      function schedule() {
+        clearTimeout(deb); clearTimeout(settle);
+        deb = setTimeout(measure, 150);
+        settle = setTimeout(measure, 450);  // iOS keeps changing dvh after the last resize
       }
-      if (e.code === 'ArrowUp' || e.code === 'Space') { e.preventDefault(); jump(); }
-      if (e.code === 'ArrowDown') { e.preventDefault(); diving = true; if (state !== 'run') start(); }
-    });
-    addEventListener('keyup', e => { if (e.code === 'ArrowDown') diving = false; });
+      measure();
+      requestAnimationFrame(() => requestAnimationFrame(measure));
+      addEventListener('load', measure);
+      if (document.fonts) document.fonts.ready.then(measure);  // the Outfit swap changes heights
+      addEventListener('resize', schedule);
+      addEventListener('orientationchange', schedule);
+      if (window.visualViewport) visualViewport.addEventListener('resize', schedule);
+      // toggling .no-snap has no layout effect, so this cannot re-trigger itself
+      new ResizeObserver(schedule).observe(document.body);
 
-    // touch: swipe up = surface/jump, swipe down = dive (toggle, stays under),
-    // tap = jump — anywhere on the page except real controls
-    const isControl = e => e.target.closest('a, button, dialog, #mute, #info');
-    const SWIPE = 24;
-    let startY = null;
-    document.addEventListener('touchstart', e => {
-      if (isControl(e)) return;
-      e.preventDefault(); // also blocks page scroll so a swipe drives the shark
-      startY = e.touches[0].clientY;
-    }, { passive: false });
-    document.addEventListener('touchend', e => {
-      if (isControl(e) || startY === null) return;
-      const dy = e.changedTouches[0].clientY - startY;
-      startY = null;
-      if (dy < -SWIPE) { if (diving) diving = false; else jump(); }      // swipe up
-      else if (dy > SWIPE) { diving = true; if (state !== 'run') start(); } // swipe down
-      else jump();                                                        // tap
-    });
+      /* ---- one gesture, one screen ----
+         CSS mandatory snap on its own only decides where a scroll LANDS: a
+         small wheel tick never leaves screen one's snap zone, so it springs
+         straight back. To make a small flick move a whole screen, take the
+         wheel and page it deliberately. CSS snap stays underneath and still
+         handles touch, keyboard, fragment links and resize.
+         The lock ends after 160ms of wheel silence rather than on a timer, so
+         one trackpad flick with a second of momentum still counts as one
+         gesture instead of racing through both screens. */
+      let paging = false, idle = 0;
+      addEventListener('wheel', e => {
+        if (snapOff || reduce) return;      // free scrolling; do not touch it
+        if (e.ctrlKey) return;              // pinch zoom
+        if (Math.abs(e.deltaY) < 3) return; // horizontal or noise
+        e.preventDefault();
+        clearTimeout(idle);
+        idle = setTimeout(() => { paging = false; }, 160);
+        if (paging) return;
+        paging = true;
+        const i = Math.round(scrollY / docEl.clientHeight);
+        const next = Math.min(screens.length - 1, Math.max(0, i + (e.deltaY > 0 ? 1 : -1)));
+        screens[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, { passive: false });
 
-    // ?hitbox — draw the collision zones so they can be tuned by eye.
-    // Redrawn every frame from HIT, so console tweaks show up immediately.
-    if (location.search.includes('hitbox')) {
-      const mk = (bg, label, z, outline) => {
-        const d = document.createElement('div');
-        d.className = 'dbg' + (outline ? ' box' : ''); d.dataset.l = label;
-        d.style.background = bg; d.style.zIndex = z || 5;
-        if (outline) d.style.outlineColor = outline;
-        game.appendChild(d); return d;
-      };
-      const bar = document.createElement('div');
-      bar.id = 'dbgbar';
-      bar.textContent = 'HITBOX DEBUG — solid = hitbox, dashed = sprite bounds. Console: HIT.shark.x1 = 70';
-      document.body.appendChild(bar);
-
-      // dashed = where the ART is, solid = what actually kills
-      const sSprite = mk('transparent', 'sprite 93x75', 7),
-            sHit    = mk('rgba(255,224,0,.22)', 'SHARK hitbox', 8, '#ffe000'),
-            hud     = mk('rgba(0,0,0,.4)', '', 9);
-      hud.id = 'dbghud';
-      // right-hand side: the shark and its zones live on the left
-      hud.style.cssText += ';right:8px;bottom:8px;width:250px;height:70px;outline:none';
-      const marks = [];
-      const set = (el, l, w, b, h) => {
-        el.style.left = l + 'px'; el.style.width = w + 'px';
-        el.style.bottom = b + 'px'; el.style.height = h + 'px';
-      };
-      (function draw() {
-        const s = HIT.shark;
-        set(sSprite, SHARK_X, 93, WATER + y - SHARK_H / 2, SHARK_H);
-        set(sHit, SHARK_X + s.x0, s.x1 - s.x0, WATER + y + s.y0, s.y1 - s.y0);
-        // Boxes live in #game, not inside the obstacles: .boat is scaleX(-1)
-        // and would mirror a child onto the wrong edge.
-        let n = 0;
-        obstacles.forEach(o => {
-          const boxes = o.boat ? HIT.boat : HIT.rock;
-          const colour = o.boat ? '#ff3b3b' : '#37a6ff';
-          boxes.forEach((b, j) => {
-            let el = marks[n];
-            if (!el) el = marks[n] = mk('transparent', '', 8, '#fff');
-            el.style.display = ''; el.style.outlineColor = colour;
-            set(el, o.x + b.x0, b.x1 - b.x0, WATER + b.y0, b.y1 - b.y0);
-            el.dataset.l = j ? '' : (o.boat ? 'BOAT' : 'ROCK') + ' d ' + ((o.x - SHARK_X) | 0);
-            n++;
+      /* ---- magnetic buttons (feedback): they lean toward the pointer ---- */
+      if (!reduce) {
+        document.querySelectorAll('.magnet').forEach(el => {
+          let mx = 0, my = 0, raf = 0;
+          const apply = () => { raf = 0; el.style.transform = `translate3d(${mx}px, ${my}px, 0)`; };
+          el.addEventListener('pointermove', e => {
+            const r = el.getBoundingClientRect();
+            mx = (e.clientX - (r.left + r.width / 2)) * .26;
+            my = (e.clientY - (r.top + r.height / 2)) * .36;
+            if (!raf) raf = requestAnimationFrame(apply);
           });
-          let e = marks[n];
-          if (!e) e = marks[n] = mk('rgba(255,255,255,.5)', '', 8);
-          e.style.display = ''; set(e, o.x, 1, 0, 250);   // o.x, what d measures from
-          n++;
+          el.addEventListener('pointerleave', () => { mx = my = 0; if (!raf) raf = requestAnimationFrame(apply); });
         });
-        for (let i = n; i < marks.length; i++) marks[i].style.display = 'none';
+      }
 
-        const o = obstacles[0];
-        hud.dataset.l =
-          `y ${y | 0}   d ${o ? (o.x - SHARK_X) | 0 : '—'}\n` +
-          `shark x ${s.x0}..${s.x1}  y ${s.y0}..${s.y1}\n` +
-          `boat  x ${HIT.boat[0].x0}..${HIT.boat[0].x1}  y ${HIT.boat[0].y0}..${HIT.boat[0].y1}\n` +
-          `rock  tip x ${HIT.rock[0].x0}..${HIT.rock[0].x1}  y ${HIT.rock[0].y0}..${HIT.rock[0].y1}`;
-        requestAnimationFrame(draw);
-      })();
-    }
+      /* ---- the strip ---- */
+      const slot = document.getElementById('strip-slot');
+      const frame = document.getElementById('shark-frame');
+      const scoreEl = document.getElementById('ro-score');
+      const bestEl = document.getElementById('ro-best');
+      const liveEl = document.getElementById('ro-live');
+      const pad5 = n => String(n | 0).padStart(5, '0');
+      let prevState = '', modalOpen = false;
 
-    // console calling card — the logo, region-mapped from
-    // SHARPUNK/IMGS/Sharpunk Vector Color.svg.
-    // Deliberately no '%' in the art: console.log reads it as a format
-    // specifier, so '%%' would collapse and '%c' would eat a style argument.
-    console.log(`%c
-                             ######
-                        @###########@  @+
-                  #################@@  @+@
-              #######################@@+@
-           ###########################
-        @##############********@***###
-       #############**********..***@##@
-     @###########**@@********.....@**#@
-    @##########****..******.......***@
-    #########..***....***.........***@
-   #########...............*........@
-   #######@...**........*****......@
-  @#######..*****@@*++++++++*@**..@
- @#######@.****++++++++++++++++@@@
-@########@+++++++++++++++++++++@@
-#########++++++++++++++++++++@#@
-#########@++++++++++++++++@@##@
- #########+++++++++++++++@@@##@
-  #########++++++++++++++@#####
-   @### ####@+++++++++++++######
-      @@  ####+++++++++++++#######           @
-             ####++++++++++++##############@
-                 ##@@@+++++++++@@ #######
+      const setNum = (el, v) => { el.textContent = v; el.dataset.n = v; };
 
-        S H A R P U N K   ·   WEB & GAMES
-`, 'color:#a2d741');
-    console.log(
-      '%cArtwork%c  @pelykhyul — instagram.com/pelykhyul\n' +
-      '%cMusic%c    Sea Shanty 2 (OSRS Remix) — JizzyJazz\n' +
-      '%cHitboxes%c add ?hitbox to the URL to see the collision boxes',
-      'color:#f769ad;font-weight:bold', 'color:inherit',
-      'color:#f769ad;font-weight:bold', 'color:inherit',
-      'color:#f769ad;font-weight:bold', 'color:inherit');
+      /* Give a dialog room by growing the iframe upward from its fixed bottom
+         edge. h = 2*bottom - vh puts the iframe's centre, where a modal
+         <dialog> lands, on the viewport's centre. With screen two snapped the
+         slot's bottom is the viewport's bottom, so this is exactly one
+         viewport. The slot's own height never changes, so nothing reflows and
+         the strip cannot move. */
+      function setModal(open, need) {
+        open = !!open;
+        need = need || 460;
+        if (open === modalOpen) return;
+        modalOpen = open;
+        if (open) {
+          const bottom = slot.getBoundingClientRect().bottom;
+          const vh = docEl.clientHeight;
+          // 2*bottom - vh centres the iframe, and so the dialog, on the
+          // viewport. Never shorter than what the child says it needs, and
+          // never taller than the run up to the viewport top, so the dialog
+          // cannot be pushed off the top edge.
+          const h = Math.min(Math.max(2 * bottom - vh, need), Math.max(need, bottom));
+          slot.style.setProperty('--modal-h', Math.round(h) + 'px');
+          // only if the strip is sitting too high to fit the dialog at all
+          if (h > bottom) slot.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        }
+        slot.classList.toggle('modal', open);
+      }
+      // a close message that never lands would leave a transparent iframe over
+      // the whole screen, swallowing clicks and touch scrolling. Recover.
+      frame.addEventListener('load', () => { modalOpen = true; setModal(false); });
+      addEventListener('pageshow', () => { modalOpen = true; setModal(false); });
 
-    // Sheets only reachable once a run starts: kept off the first-paint path,
-    // then warmed after load so the first jump/dive/death doesn't pop in.
-    addEventListener('load', () => {
-      for (const n of ['sharkjump', 'sharkdive', 'sharkdead', 'boat', 'rock', 'rock2'])
-        new Image().src = 'img/' + n + '.webp';
-    });
+      addEventListener('message', e => {
+        if (e.source !== frame.contentWindow || !e.data) return;
+        const d = e.data;
+        if (typeof d.sharkScore === 'number') {
+          setNum(scoreEl, pad5(d.sharkScore));
+          setNum(bestEl, pad5(d.sharkHi));
+          // announce once per death, never per tick
+          if (d.sharkState === 'dead' && prevState !== 'dead')
+            liveEl.textContent = `Game over. Score ${d.sharkScore | 0}. Best ${d.sharkHi | 0}.`;
+          else if (d.sharkState === 'run' && prevState !== 'run') liveEl.textContent = '';
+          prevState = d.sharkState;
+        }
+        if ('sharkModal' in d) setModal(d.sharkModal, d.need);
+      });
 
-    tick();
+      /* ---- forward game keys into the strip while it is on screen ----
+         Never swallow a key a focused control owns, and leave PageUp/PageDown/
+         Home/End unbound so the keyboard always has a way to scroll. */
+      const CONTROL = 'a, button, input, textarea, select, summary, [contenteditable]';
+      let framed = false;
+      new IntersectionObserver(es => { framed = es[0].isIntersecting; }, { threshold: .6 }).observe(frame);
+      const relay = (e, down) => {
+        if (!framed || !['ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const a = document.activeElement;
+        if (a && a !== document.body && a.matches(CONTROL)) return;
+        e.preventDefault();
+        frame.contentWindow.postMessage({ sharkKey: e.code, down }, '*');
+      };
+      addEventListener('keydown', e => relay(e, true));
+      addEventListener('keyup', e => relay(e, false));
+    })();
   </script>
 </body>
 </html>
