@@ -1,5 +1,21 @@
 AddOutputFilterByType DEFLATE text/html text/css image/svg+xml application/javascript
+
+# woff2, webp and mp4 are already compressed, so they are deliberately absent
+# from DEFLATE above. Some shared hosts still ship an old mime.types without
+# them; these lines are harmless where the type is already known.
+AddType font/woff2 .woff2
+AddType image/webp .webp
+AddType video/mp4  .mp4
+
 ExpiresActive On
 ExpiresByType image/svg+xml "access plus 1 week"
 ExpiresByType audio/mpeg "access plus 1 month"
 ExpiresByType text/html "access plus 10 minutes"
+
+# None of these filenames are content-hashed, so a far-future expiry would
+# strand returning visitors on a stale copy until it lapsed. The fonts are
+# fixed subsets that will not change, so they take a year. The screenshots and
+# Larry are both expected to be replaced, so they take a month.
+ExpiresByType font/woff2 "access plus 1 year"
+ExpiresByType image/webp "access plus 1 month"
+ExpiresByType video/mp4 "access plus 1 month"
