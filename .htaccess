@@ -1,5 +1,13 @@
 AddOutputFilterByType DEFLATE text/html text/css image/svg+xml application/javascript
 
+# The game used to live at /shark/ in an iframe and is now inlined on the home
+# page. The old folder is still on the server, so send it to the home page
+# rather than serving a second, orphaned copy of the game.
+RewriteEngine On
+# Absolute target on purpose: behind OVH's TLS terminator a relative one comes
+# back as https://sharpunk.com:443/.
+RewriteRule ^shark/?$ https://sharpunk.com/ [R=301,L]
+
 # woff2, webp and mp4 are already compressed, so they are deliberately absent
 # from DEFLATE above. Some shared hosts still ship an old mime.types without
 # them; these lines are harmless where the type is already known.
