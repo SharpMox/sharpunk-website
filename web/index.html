@@ -274,6 +274,15 @@
     .foot-base .mk { display: flex; align-items: center; gap: 12px; color: var(--fg); text-decoration: none; }
     .foot-base .mk img { width: 30px; height: 30px; }
 
+    /* click-to-copy address. A button, not a link: it performs an action
+       rather than navigating, and aria-live announces the confirmation. */
+    .mailcopy {
+      font: inherit; color: inherit; letter-spacing: inherit;
+      background: none; border: 0; padding: 0; cursor: pointer;
+    }
+    .mailcopy:hover { color: var(--violet); }
+    .mailcopy:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; border-radius: 4px; }
+    .mailcopy[data-copied] { color: var(--violet); }
     /* ---------------- reveal ---------------- */
     .reveal { opacity: 0; transform: translateY(22px); }
     .reveal.in {
@@ -395,7 +404,7 @@
     <div class="shell">
       <div class="foot-base glass">
         <a class="mk" href="/"><img src="/logo.svg" alt=""> Sharpunk</a>
-        <a href="mailto:sharpunk.soft@gmail.com">sharpunk.soft@gmail.com</a>
+        <button class="mailcopy" type="button" data-mail="sharpunk.soft@gmail.com" aria-live="polite">sharpunk.soft@gmail.com</button>
       </div>
     </div>
   </footer>
@@ -403,6 +412,29 @@
   <script>
     (function () {
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      /* click-to-copy address, with a fallback for contexts where the async
+         clipboard API is unavailable or refused */
+      document.querySelectorAll('.mailcopy').forEach(btn => {
+        const addr = btn.dataset.mail, label = btn.textContent;
+        let restore = 0;
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(addr);
+          } catch {
+            const t = document.createElement('textarea');
+            t.value = addr; t.setAttribute('readonly', '');
+            t.style.cssText = 'position:fixed;top:-9999px;opacity:0';
+            document.body.appendChild(t); t.select();
+            try { document.execCommand('copy'); } finally { t.remove(); }
+          }
+          btn.textContent = 'Copied'; btn.dataset.copied = '';
+          clearTimeout(restore);
+          restore = setTimeout(() => {
+            btn.textContent = label; delete btn.dataset.copied;
+          }, 1600);
+        });
+      });
 
       const io = new IntersectionObserver(es => {
         for (const e of es) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
