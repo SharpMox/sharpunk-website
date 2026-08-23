@@ -730,6 +730,21 @@
       const CONTROL = 'a, button, input, textarea, select, summary, [contenteditable]';
       let framed = false;
       new IntersectionObserver(es => { framed = es[0].isIntersecting; }, { threshold: .6 }).observe(frame);
+
+      /* The strip's jump/dive/death sheets and its death sound are 141KB and
+         are only reachable once a run starts, so the game holds them back
+         until we say the player can see the strip. Warm them as screen two
+         comes into range, which is a whole gesture before anyone can play. */
+      let warmWanted = false, warmSent = false;
+      const sendWarm = () => {
+        if (!warmWanted || warmSent || !frame.contentWindow) return;
+        warmSent = true;
+        frame.contentWindow.postMessage({ sharkWarm: true }, '*');
+      };
+      new IntersectionObserver(es => {
+        if (es[0].isIntersecting) { warmWanted = true; sendWarm(); }
+      }, { rootMargin: '500px' }).observe(frame);
+      frame.addEventListener('load', sendWarm);   // in range before it finished loading
       const relay = (e, down) => {
         if (!framed || !['ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) return;
         if (e.metaKey || e.ctrlKey || e.altKey) return;

@@ -320,7 +320,7 @@
       <div class="shell feature-in">
         <span class="feature-mark reveal">
           <video src="/art/larry.mp4" poster="/art/larry-anim.webp"
-                 autoplay loop muted playsinline aria-label="Larry, a NO-KINGS piece"></video>
+                 preload="none" loop muted playsinline aria-label="Larry, a NO-KINGS piece"></video>
         </span>
         <div class="reveal" style="--d:90ms">
           <span class="kind">Chess variant, card game</span>
@@ -350,12 +350,18 @@
 
   <script>
     (function () {
-      // an autoplaying loop is motion like any other: hold the poster frame
-      // when the visitor has asked for less of it
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        document.querySelectorAll('video[autoplay]').forEach(v => {
-          v.removeAttribute('autoplay'); v.pause(); v.currentTime = 0;
-        });
+      /* The clip is 133KB and sits below the fold, so preload="none" keeps it
+         off the initial load entirely; the poster frame stands in until the
+         band is nearly in view. An autoplaying loop is also motion like any
+         other, so under reduced motion it simply never starts and the poster
+         is what you get. */
+      const clip = document.querySelector('.feature-mark video');
+      if (clip && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        new IntersectionObserver((es, obs) => {
+          if (!es[0].isIntersecting) return;
+          obs.disconnect();
+          clip.play().catch(() => {});   // a refused autoplay just leaves the poster
+        }, { rootMargin: '300px' }).observe(clip);
       }
       /* click-to-copy address, with a fallback for contexts where the async
          clipboard API is unavailable or refused */
