@@ -19,6 +19,10 @@ ExpiresActive On
 ExpiresByType image/svg+xml "access plus 1 week"
 ExpiresByType audio/mpeg "access plus 1 month"
 ExpiresByType text/html "access plus 10 minutes"
+# field.js is shared by all three pages, so a short expiry is mostly about
+# reusing it across a visit. It is not content-hashed, so it stays short
+# enough that a deploy is not stranded behind it.
+ExpiresByType application/javascript "access plus 1 hour"
 
 # None of these filenames are content-hashed, so a far-future expiry would
 # strand returning visitors on a stale copy until it lapsed. The fonts are
