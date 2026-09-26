@@ -1,0 +1,231 @@
+/* ============================================================
+   SHARPUNK - shared styles for home, /web/ and /games/.
+   Only rules that are identical on every page live here; each page keeps
+   its own layout inline, after this file, so it can override.
+   Linked as /site.css?v=N: bump N on every change to this file, or
+   returning visitors keep the old copy until .htaccess lets it expire.
+   ============================================================ */
+
+@font-face {
+  font-family: 'Outfit'; src: url(/fonts/outfit.woff2) format('woff2');
+  font-weight: 100 900; font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono'; src: url(/fonts/jetbrains-mono.woff2) format('woff2');
+  font-weight: 100 800; font-display: swap;
+}
+
+:root {
+  --bg:      #090615;
+  --bg-rgb:  9 6 21;        /* --bg as channels, for shadows and scrims */
+  --solid:   #14102a;       /* opaque stand-in for glass */
+  --violet:  #9b7bff;
+  --violet-rgb: 155 123 255;
+  --violet-2:#6d4ad6;
+  --violet-light: #c6b4ff;
+  --lime:    #a2d541;       /* logo.svg's green */
+  --fg:      #ece8fb;
+  --muted:   #9d95bd;
+  --glass:   rgba(255, 255, 255, .055);
+  --glass-2: rgba(255, 255, 255, .085);
+  --edge:    rgba(255, 255, 255, .11);
+  --edge-2:  rgba(255, 255, 255, .19);
+  --r-panel: 24px;
+  --r-pill:  999px;
+  --shell:   1340px;
+  --display: 'Outfit', system-ui, sans-serif;
+  --mono:    'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; overflow-x: clip; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--display); font-size: 16px; line-height: 1.65; font-weight: 300;
+  /* clip, not hidden: hidden on one axis computes the other to auto, which
+     makes body a scroll container. Sticky elements and scroll snap then
+     resolve against body instead of the viewport. */
+  -webkit-font-smoothing: antialiased; overflow-x: clip;
+}
+a { color: inherit; }
+::selection { background: var(--violet); color: var(--bg); }
+.shell { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 26px; }
+@media (max-width: 640px) { .shell { padding: 0 18px; } }
+
+/* ---------------- aurora field ---------------- */
+.aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.aurora i {
+  position: absolute; display: block; border-radius: 50%;
+  filter: blur(90px); opacity: .55; will-change: transform;
+}
+.aurora .b1 { width: 56vw; height: 56vw; left: -12vw; top: -14vw;
+              background: radial-gradient(circle, #5b2ea6, transparent 68%);
+              animation: drift1 28s ease-in-out infinite; }
+.aurora .b2 { width: 48vw; height: 48vw; right: -10vw; top: 12vh;
+              background: radial-gradient(circle, #3a2a8f, transparent 66%);
+              animation: drift2 34s ease-in-out infinite; }
+.aurora .b3 { width: 44vw; height: 44vw; left: 24vw; bottom: -18vw;
+              background: radial-gradient(circle, #7a3f9e, transparent 70%);
+              animation: drift3 40s ease-in-out infinite; }
+@keyframes drift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); }
+                    50%     { transform: translate3d(8vw, 6vh, 0) scale(1.14); } }
+@keyframes drift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.08); }
+                    50%     { transform: translate3d(-7vw, 9vh, 0) scale(.92); } }
+@keyframes drift3 { 0%,100% { transform: translate3d(0,0,0) scale(.96); }
+                    50%     { transform: translate3d(6vw, -8vh, 0) scale(1.1); } }
+.veil { position: fixed; inset: 0; z-index: 1; pointer-events: none;
+        background: radial-gradient(ellipse at 50% 0%, transparent, var(--bg) 78%); }
+
+/* ---------------- glass primitive (web approximation) ---------------- */
+.glass {
+  background: linear-gradient(150deg, var(--glass-2), var(--glass));
+  border: 1px solid var(--edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 24px 60px rgb(var(--bg-rgb) / .55);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border-radius: var(--r-panel);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass { background: var(--solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+/* The .glass top highlight reads as light from above, which works on the big
+   panels but on a pill it just makes the top border look twice as thick as
+   the bottom. Keep the drop shadow, drop the highlight. */
+.nav, .foot-base { box-shadow: 0 24px 60px rgb(var(--bg-rgb) / .55); }
+
+/* ---------------- nav ---------------- */
+header { position: sticky; top: 16px; z-index: 40; padding: 0 26px; }
+.nav {
+  max-width: var(--shell); margin: 0 auto; height: 62px;
+  display: flex; align-items: center; gap: 26px; padding: 0 12px 0 18px;
+  border-radius: var(--r-pill);
+}
+.brand { display: flex; align-items: center; gap: 11px; text-decoration: none; margin-right: auto; }
+.brand img { width: 30px; height: 30px; }
+.brand span { font-weight: 700; letter-spacing: .18em; font-size: 14px; text-transform: uppercase; }
+.nav nav { display: flex; gap: 8px; }
+.nav nav a {
+  text-decoration: none; font-size: 13px; color: var(--muted); font-weight: 500;
+  padding: 8px 14px; border-radius: var(--r-pill);
+  transition: background .3s cubic-bezier(.16,1,.3,1), color .3s cubic-bezier(.16,1,.3,1);
+}
+.nav nav a:hover, .nav nav a:focus-visible,
+.nav nav a[aria-current="page"] { color: var(--fg); background: var(--glass-2); }
+/* The links stay reachable on phones: the wordmark drops instead, and the
+   pills tighten. */
+@media (max-width: 560px) {
+  .brand span { display: none; }
+  .nav { gap: 10px; padding: 0 8px 0 14px; }
+  .nav nav { gap: 2px; }
+  .nav nav a { padding: 8px 10px; font-size: 12px; }
+}
+
+/* ---------------- page header (/web/, /games/) ---------------- */
+/* longhands: the padding shorthand here would zero out the horizontal
+   padding .shell provides, leaving the huge title flush against the
+   viewport edge on narrow screens */
+.page-head { padding-top: 74px; padding-bottom: 56px; }
+.page-head h1 {
+  margin: 0 0 20px; font-weight: 500; letter-spacing: -.04em; line-height: 1;
+  font-size: clamp(3rem, 9vw, 7rem);
+}
+.page-head h1 em {
+  font-style: italic; font-weight: 500;
+  background: linear-gradient(100deg, var(--violet), #d9c9ff 70%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  line-height: 1.15; display: inline-block;
+  /* background-clip: text paints only inside the element's box. An italic
+     run overhangs its advance width on the last glyph and drops below the
+     baseline, so both edges need slack or the final letter is sliced
+     (the d in "made" was rendering as an a). The negative margins hand
+     the space back to the layout. */
+  padding-bottom: .18em; margin-bottom: -.14em;
+  padding-right: .16em; margin-right: -.16em;
+}
+.page-head p { margin: 0; color: var(--muted); max-width: 54ch; font-size: 1rem; }
+@media (max-width: 700px) { .page-head { padding-top: 48px; padding-bottom: 36px; } }
+
+/* ---------------- footer (/web/, /games/) ---------------- */
+footer { padding: 46px 0 50px; }
+.foot-base {
+  display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding: 22px 26px; border-radius: var(--r-pill);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--muted);
+}
+.foot-base a { color: var(--violet); text-decoration: none; }
+.foot-base a:hover { color: var(--fg); }
+.foot-base .mk { display: flex; align-items: center; gap: 12px; color: var(--fg); text-decoration: none; }
+.foot-base .mk img { width: 30px; height: 30px; }
+
+/* click-to-copy address. A button, not a link: it performs an action
+   rather than navigating, and aria-live announces the confirmation. */
+.mailcopy {
+  font: inherit; color: inherit; letter-spacing: inherit;
+  background: none; border: 0; padding: 0; cursor: pointer;
+}
+.mailcopy:hover { color: var(--violet); }
+.mailcopy:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; border-radius: 4px; }
+.mailcopy[data-copied] { color: var(--violet); }
+
+/* ---------------- link pill (/web/, /games/) ---------------- */
+.go {
+  display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+  font-size: 13px; font-weight: 500; color: var(--fg); white-space: nowrap;
+  padding: 12px 22px; border-radius: var(--r-pill);
+  background: var(--glass); border: 1px solid var(--edge-2);
+  transition: background .3s cubic-bezier(.16,1,.3,1), transform .25s cubic-bezier(.16,1,.3,1);
+}
+.go:hover { background: var(--glass-2); transform: translateY(-2px); }
+.go:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; }
+.go .arw { transition: transform .3s cubic-bezier(.16,1,.3,1); }
+.go:hover .arw { transform: translateX(4px); }
+
+/* ---------------- liquid metal rim ----------------
+   On .btn (home) and .go (/web/, /games/).
+   An iridescent specular edge that travels around the pill, after the
+   liquid-metal component on metal.jakubantalik.com. That one paints two
+   2D canvases per button; this is the CSS equivalent: a conic gradient
+   masked down to just the border ring, with a drop-shadow so the bright
+   part blooms outward the way the reference does.
+   --metal has to be registered with @property: an unregistered custom
+   property is not interpolatable, so the sweep would snap rather than
+   travel. Without @property support the rim still renders, just static. */
+@property --metal {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.btn, .go { position: relative; }
+.btn::before, .go::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  padding: 1.5px; pointer-events: none;
+  background: conic-gradient(from var(--metal),
+    transparent 0deg,
+    rgba(255, 255, 255, .95) 16deg,
+    #f769ad 30deg,
+    var(--violet) 48deg,
+    rgba(150, 225, 255, .9) 62deg,
+    transparent 92deg,
+    transparent 186deg,
+    rgba(255, 255, 255, .6) 206deg,
+    var(--violet) 226deg,
+    transparent 262deg,
+    transparent 360deg);
+  /* keep only the ring: the border box minus the content box */
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 5px rgb(var(--violet-rgb) / .5));
+  animation: metal-sweep 6s linear infinite;
+}
+@keyframes metal-sweep { to { --metal: 360deg; } }
+
+@media (prefers-reduced-motion: reduce) {
+  /* hold the rim still, but keep it */
+  .btn::before, .go::before { animation: none; }
+  html { scroll-behavior: auto; }
+  .aurora i { animation: none; }
+  .btn, .go, .nav nav a { transition: none; }
+}
