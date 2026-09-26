@@ -8,11 +8,13 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/site.css?v=1">
   <style>
     /* ============================================================
        SHARPUNK - home
        Two full-viewport screens that snap: the presentation, then the
        shark strip. One wheel gesture moves a whole screen.
+       Shared tokens, nav, glass and the metal rim live in /site.css.
        Dials: DESIGN_VARIANCE 8 - MOTION_INTENSITY 7 - VISUAL_DENSITY 3
        Accent locked to the brand's own violet. This is a deliberate
        purple palette because the brand is purple, not an AI default.
@@ -22,37 +24,12 @@
        Theme: dark, locked (the brand has no light mode).
        ============================================================ */
 
-    @font-face {
-      font-family: 'Outfit'; src: url(/fonts/outfit.woff2) format('woff2');
-      font-weight: 100 900; font-display: swap;
-    }
-    @font-face {
-      font-family: 'JetBrains Mono'; src: url(/fonts/jetbrains-mono.woff2) format('woff2');
-      font-weight: 100 800; font-display: swap;
-    }
-
     :root {
-      --bg:      #090615;
-      --violet:  #9b7bff;
-      --violet-2:#6d4ad6;
-      --fg:      #ece8fb;
-      --muted:   #9d95bd;
-      --glass:   rgba(255, 255, 255, .055);
-      --glass-2: rgba(255, 255, 255, .085);
-      --edge:    rgba(255, 255, 255, .11);
-      --edge-2:  rgba(255, 255, 255, .19);
-      --r-panel: 24px;
-      --r-pill:  999px;
-      --shell:   1340px;
       --strip:   300px;
       /* the colour the strip's own background gradient starts on: the
          section above fades into exactly this so the seam disappears */
       --strip-top: #16113a;
-      --display: 'Outfit', system-ui, sans-serif;
-      --mono:    'JetBrains Mono', ui-monospace, monospace;
     }
-
-    * { box-sizing: border-box; }
 
     /* ---------------- the snap container ----------------
        scroll-snap-type lives on the root, so the viewport is the snap
@@ -63,22 +40,8 @@
        container that never scrolls, and snap points would resolve
        against it instead of the viewport. Snapping would silently
        do nothing at all. */
-    html {
-      scroll-behavior: smooth;
-      overflow-x: clip;
-      scroll-snap-type: y mandatory;
-    }
+    html { scroll-snap-type: y mandatory; }
     html.no-snap { scroll-snap-type: none; }
-
-    body {
-      margin: 0; background: var(--bg); color: var(--fg);
-      font-family: var(--display); font-size: 16px; line-height: 1.65; font-weight: 300;
-      -webkit-font-smoothing: antialiased; overflow-x: clip;
-    }
-    a { color: inherit; }
-    ::selection { background: var(--violet); color: #0b0818; }
-    .shell { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 26px; }
-    @media (max-width: 640px) { .shell { padding: 0 18px; } }
 
     /* min-height, not height: an over-tall screen must be able to grow, or
        the snap gate below cannot measure the overflow. --screen-h is pinned
@@ -90,30 +53,6 @@
       scroll-snap-stop: always;   /* this is what makes one gesture = one screen */
       position: relative; z-index: 2;
     }
-
-    /* ---------------- aurora field ---------------- */
-    .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-    .aurora i {
-      position: absolute; display: block; border-radius: 50%;
-      filter: blur(90px); opacity: .55; will-change: transform;
-    }
-    .aurora .b1 { width: 56vw; height: 56vw; left: -12vw; top: -14vw;
-                  background: radial-gradient(circle, #5b2ea6, transparent 68%);
-                  animation: drift1 28s ease-in-out infinite; }
-    .aurora .b2 { width: 48vw; height: 48vw; right: -10vw; top: 12vh;
-                  background: radial-gradient(circle, #3a2a8f, transparent 66%);
-                  animation: drift2 34s ease-in-out infinite; }
-    .aurora .b3 { width: 44vw; height: 44vw; left: 24vw; bottom: -18vw;
-                  background: radial-gradient(circle, #7a3f9e, transparent 70%);
-                  animation: drift3 40s ease-in-out infinite; }
-    @keyframes drift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); }
-                        50%     { transform: translate3d(8vw, 6vh, 0) scale(1.14); } }
-    @keyframes drift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.08); }
-                        50%     { transform: translate3d(-7vw, 9vh, 0) scale(.92); } }
-    @keyframes drift3 { 0%,100% { transform: translate3d(0,0,0) scale(.96); }
-                        50%     { transform: translate3d(6vw, -8vh, 0) scale(1.1); } }
-    .veil { position: fixed; inset: 0; z-index: 1; pointer-events: none;
-            background: radial-gradient(ellipse at 50% 0%, transparent, var(--bg) 78%); }
 
     /* ---------------- the background field ----------------
        Absolute inside .s1 rather than fixed: that scopes it to screen one by
@@ -128,54 +67,15 @@
       z-index: 0; pointer-events: none; opacity: .6;
     }
 
-    /* ---------------- glass primitive (web approximation) ---------------- */
-    .glass {
-      background: linear-gradient(150deg, var(--glass-2), var(--glass));
-      border: 1px solid var(--edge);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 24px 60px rgba(6, 4, 16, .55);
-      backdrop-filter: blur(22px) saturate(150%);
-      -webkit-backdrop-filter: blur(22px) saturate(150%);
-      border-radius: var(--r-panel);
-    }
-    @media (prefers-reduced-transparency: reduce) {
-      .glass { background: #14102a; backdrop-filter: none; -webkit-backdrop-filter: none; }
-    }
-
     /* ---------------- nav ----------------
        fixed, not sticky: sticky participates in flow, so its height would
        offset every snap point below it. Out of flow means the snap points
        land exactly on 0 and 1 screen, whatever the nav measures. */
     header {
-      position: fixed; top: 16px; left: 0; right: 0;
-      z-index: 40; padding: 0 26px;
+      position: fixed; left: 0; right: 0;
       pointer-events: none;          /* the transparent band must not eat hero clicks */
     }
-    .nav {
-      pointer-events: auto;
-      max-width: var(--shell); margin: 0 auto; height: 62px;
-      display: flex; align-items: center; gap: 26px; padding: 0 12px 0 18px;
-      border-radius: var(--r-pill);
-    }
-    /* The .glass top highlight reads as light from above, which works on the
-       big panels but on a 62px pill it just makes the top border look twice
-       as thick as the bottom. Keep the drop shadow, drop the highlight. */
-    .nav { box-shadow: 0 24px 60px rgba(6, 4, 16, .55); }
-    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; margin-right: auto; }
-    .brand img { width: 30px; height: 30px; }
-    .brand span { font-weight: 700; letter-spacing: .18em; font-size: 14px; text-transform: uppercase; }
-    .nav nav { display: flex; gap: 8px; }
-    .nav nav a {
-      text-decoration: none; font-size: 13px; color: var(--muted); font-weight: 500;
-      padding: 8px 14px; border-radius: var(--r-pill);
-      transition: background .3s cubic-bezier(.16,1,.3,1), color .3s;
-    }
-    .nav nav a:hover, .nav nav a:focus-visible { color: var(--fg); background: var(--glass-2); }
-    @media (max-width: 560px) {
-      .brand span { display: none; }
-      .nav { gap: 10px; padding: 0 8px 0 14px; }
-      .nav nav { gap: 2px; }
-      .nav nav a { padding: 8px 10px; font-size: 12.5px; }
-    }
+    .nav { pointer-events: auto; }
 
     /* ---------------- screen one: the presentation ---------------- */
     .s1 { display: grid; align-items: center; padding: 92px 0 40px; }
@@ -218,7 +118,7 @@
          transform is what silently killed the hover. They are separate
          properties and compose, so both work at once. */
       translate: -.018em -.022em;
-      transition: translate .3s cubic-bezier(.16,1,.3,1), color .3s;
+      transition: translate .3s cubic-bezier(.16,1,.3,1), color .3s cubic-bezier(.16,1,.3,1);
     }
     .ghost::before {
       color: var(--violet);
@@ -226,11 +126,11 @@
     }
     /* the lime copy only exists inside the chromatic burst */
     .ghost::after {
-      color: #a2d741; opacity: 0;
+      color: var(--lime); opacity: 0;
       translate: .018em -.022em;
       animation: glitch-split 9s steps(1, end) infinite;
     }
-    .ghost:hover::before { translate: -.055em -.05em; color: #c6b4ff; }
+    .ghost:hover::before { translate: -.055em -.05em; color: var(--violet-light); }
     .ghost:hover::after  { translate: .055em -.05em; }
     /* the word itself shakes during a burst, so the white text moves too
        rather than sitting still behind a moving ghost */
@@ -280,15 +180,6 @@
       64.4%, 100% { transform: none; }
     }
 
-    /* click-to-copy address. A button, not a link: it performs an action
-       rather than navigating, and aria-live announces the confirmation. */
-    .mailcopy {
-      font: inherit; color: inherit; letter-spacing: inherit;
-      background: none; border: 0; padding: 0; cursor: pointer;
-    }
-    .mailcopy:hover { color: var(--violet); }
-    .mailcopy:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; border-radius: 4px; }
-    .mailcopy[data-copied] { color: var(--violet); }
     .hero-mail {
       display: inline-flex; align-items: center;
       font-family: var(--mono); font-size: 12px; letter-spacing: .1em;
@@ -300,14 +191,14 @@
       font-size: 14px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
       text-decoration: none; min-width: 132px;
       padding: 16px 30px; border-radius: var(--r-pill); border: 1px solid transparent;
-      transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s;
+      transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1), background .3s cubic-bezier(.16,1,.3,1);
       will-change: transform;
     }
     /* PLAY leads, so it carries the solid weight. WEB and GAMES are the
        matched glass pair behind it. */
     .btn-primary {
       background: linear-gradient(140deg, var(--violet), var(--violet-2));
-      color: #0b0818;
+      color: var(--bg);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.34), 0 14px 34px rgba(109, 74, 214, .34);
     }
     .btn-ghost { background: var(--glass); border-color: var(--edge-2); color: var(--fg); }
@@ -318,11 +209,11 @@
     .hero-art { position: relative; display: grid; place-items: center; padding: 20px; }
     .hero-art .well {
       position: absolute; inset: 0; border-radius: 50%;
-      background: radial-gradient(circle at 50% 42%, rgba(155,123,255,.24), transparent 62%);
+      background: radial-gradient(circle at 50% 42%, rgb(var(--violet-rgb) / .24), transparent 62%);
     }
     .hero-art img {
       width: min(100%, 360px); position: relative;
-      filter: drop-shadow(0 30px 60px rgba(9, 6, 21, .8));
+      filter: drop-shadow(0 30px 60px rgb(var(--bg-rgb) / .8));
       /* The mark's fins sweep past the disc, so the element box centre is not
          the disc centre. Measured off the rendered alpha: the dense core sits
          at 51.5% / 49.3%. Spinning about the box centre made it wobble. */
@@ -370,7 +261,7 @@
     }
     .ro-k {
       display: block; font-family: var(--mono); font-size: 11px;
-      letter-spacing: .28em; text-transform: uppercase; color: var(--muted);
+      letter-spacing: .24em; text-transform: uppercase; color: var(--muted);
       margin-bottom: 6px;
     }
     .ro-n {
@@ -393,7 +284,7 @@
       animation: glitch-slice 9s steps(1, end) infinite;
     }
     .ro-n::after {
-      color: #a2d741; opacity: 0;
+      color: var(--lime); opacity: 0;
       translate: .012em -.016em;
       animation: glitch-split 9s steps(1, end) infinite;
     }
@@ -409,7 +300,7 @@
     .credits {
       display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px;
       padding: 0 0 16px; border-bottom: 1px solid var(--edge);
-      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
       text-transform: uppercase; color: var(--muted);
     }
     .credits a { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
@@ -434,17 +325,13 @@
       position: relative; width: 100%; height: var(--strip);
       overflow: hidden; touch-action: none; user-select: none;
       /* starts on exactly the colour .s2-top fades into, so the seam vanishes */
-      background: linear-gradient(180deg, var(--strip-top) 0%, #1e1749 55%, #140f30 100%);
+      background: linear-gradient(180deg, var(--strip-top) 0%, #1e1749 55%, var(--solid) 100%);
       /* the game's own palette, formerly the ?theme=chrome skin */
       --water: rgba(140, 110, 255, .22);
       --waterline: rgba(214, 200, 255, .5);
       --pill-bg: rgba(255, 255, 255, .1);
-      --pill-fg: #f0ebff;
+      --pill-fg: var(--fg);
       --pill-bd: rgba(255, 255, 255, .22);
-      --pill-radius: 999px;
-      --dialog-radius: 24px;
-      --pill-font: 'JetBrains Mono', ui-monospace, monospace;
-      --accent: #c6b4ff;
     }
     #water {
       position: absolute; bottom: 0; left: 0; right: 0; height: 90px;
@@ -515,42 +402,39 @@
       position: absolute; top: 10px; right: 12px; z-index: 4;
       display: flex; gap: 8px; align-items: center;
     }
-    #score, #msg, #mute, #info {
-      font-family: var(--pill-font); font-size: 15px; font-weight: 700; letter-spacing: .06em;
+    #msg, #mute, #info {
+      font-family: var(--mono); font-size: 15px; font-weight: 700; letter-spacing: .06em;
       color: var(--pill-fg); white-space: nowrap;
       background: var(--pill-bg); border: 2px solid var(--pill-bd);
-      padding: 5px 12px; border-radius: var(--pill-radius); line-height: 19px;
+      padding: 5px 12px; border-radius: var(--r-pill); line-height: 19px;
       backdrop-filter: blur(8px);
     }
     #mute, #info { cursor: pointer; padding: 5px 9px; }
     #mute:focus-visible, #info:focus-visible { outline: 2px solid var(--pill-fg); outline-offset: 2px; }
-    .key { color: var(--accent); }
-    #hiscore { color: var(--accent); }
-    #hiscore::before { content: "|"; color: var(--pill-fg); margin: 0 9px; opacity: .55; }
+    .key { color: var(--violet-light); }
 
     #msg {
       position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
       z-index: 3; text-transform: uppercase; font-size: 14px;
     }
     #msg:empty { display: none; }
-    #score { display: none; }   /* the big readout on screen two says it better */
 
     /* help / death dialog. Sized as a panel, not a pill: the death state
        carries ~420px of content, so it needs its own radius token and a real
        max-width. */
     #help {
       background: var(--pill-bg); color: var(--pill-fg);
-      border: 2px solid var(--pill-bd); border-radius: var(--dialog-radius);
-      font-family: var(--pill-font); font-size: 15px; font-weight: 700;
+      border: 2px solid var(--pill-bd); border-radius: var(--r-panel);
+      font-family: var(--mono); font-size: 15px; font-weight: 700;
       padding: 0; line-height: 1.85; outline: none;
       width: min(92vw, 380px); max-height: 90dvh; overflow: auto;
       backdrop-filter: blur(14px);
     }
-    #help::backdrop { background: rgba(8, 6, 15, .72); }
+    #help::backdrop { background: rgb(var(--bg-rgb) / .72); }
     #hbody { padding: 16px 26px 22px; display: flex; flex-direction: column; }
     #hx {
       align-self: flex-end; margin: -8px -18px -2px 0; cursor: pointer;
-      background: none; border: none; color: inherit; font: bold 18px var(--pill-font); outline: none;
+      background: none; border: none; color: inherit; font: 700 18px var(--mono); outline: none;
     }
     #deadart:not([hidden]) {
       display: flex; align-items: center; justify-content: center;
@@ -565,64 +449,21 @@
       animation: a-deadloop .39s steps(3) infinite;
     }
     #dhead:not([hidden]) { display: block; margin: 0 0 8px; text-align: center; }
-    #gameover, #retry, .lbl, #hbody .obs { color: var(--accent); }
-    #hbody .obs { font-weight: bold; text-decoration: none; }
-    #hbody .obs:hover { text-decoration: underline; }
+    #gameover, #retry, .lbl { color: var(--violet-light); }
     #retry:not([hidden]) { display: block; margin: 14px 0 0; text-align: center; }
 
     /* narrow strip: the HUD row and the centred prompt overlapped, so the
        pills shrink and the prompt drops below them */
     @media (max-width: 720px) {
       #hud { top: 8px; right: 8px; gap: 6px; }
-      #score, #mute, #info { font-size: 12px; padding: 4px 8px; line-height: 16px; }
-      #hiscore::before { margin: 0 6px; }
+      #mute, #info { font-size: 12px; padding: 4px 8px; line-height: 16px; }
       #msg { top: 52px; font-size: 12px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
       #game .bird, .deadico { animation: none; }
     }
-  
-    /* ---------------- liquid metal rim ----------------
-       An iridescent specular edge that travels around the pill, after the
-       liquid-metal component on metal.jakubantalik.com. That one paints two
-       2D canvases per button; this is the CSS equivalent: a conic gradient
-       masked down to just the border ring, with a drop-shadow so the bright
-       part blooms outward the way the reference does.
-       --metal has to be registered with @property: an unregistered custom
-       property is not interpolatable, so the sweep would snap rather than
-       travel. Without @property support the rim still renders, just static. */
-    @property --metal {
-      syntax: "<angle>";
-      initial-value: 0deg;
-      inherits: false;
-    }
-    .btn, .go { position: relative; }
-    .btn::before, .go::before {
-      content: ""; position: absolute; inset: 0; border-radius: inherit;
-      padding: 1.5px; pointer-events: none;
-      background: conic-gradient(from var(--metal),
-        transparent 0deg,
-        rgba(255, 255, 255, .95) 16deg,
-        #f769ad 30deg,
-        #9b7bff 48deg,
-        rgba(150, 225, 255, .9) 62deg,
-        transparent 92deg,
-        transparent 186deg,
-        rgba(255, 255, 255, .6) 206deg,
-        #9b7bff 226deg,
-        transparent 262deg,
-        transparent 360deg);
-      /* keep only the ring: the border box minus the content box */
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask-composite: exclude;
-      filter: drop-shadow(0 0 5px rgba(155, 123, 255, .5));
-      animation: metal-sweep 6s linear infinite;
-    }
-    @keyframes metal-sweep { to { --metal: 360deg; } }
-    /* PLAY sits out; it already leads on colour and does not need the rim */
+    /* PLAY sits out of the metal rim (/site.css); it already leads on colour */
     .btn-primary::before { content: none; }
     /* GAMES runs the sweep out of phase with WEB so the pair does not read
        as one repeated element. Not half a cycle: the gradient has bright
@@ -630,16 +471,13 @@
     .cta-row a:nth-child(3)::before { animation-delay: -2.2s; }
 
     @media (prefers-reduced-motion: reduce) {
-      /* hold the rim still, but keep it */
-      .btn::before, .go::before { animation: none; }
       /* the snap fling is UA-driven and is NOT governed by scroll-behavior,
          so disabling snap is the only way to honour the preference */
-      html { scroll-behavior: auto; scroll-snap-type: none; }
-      .aurora i, .hero-art img { animation: none; }
+      html { scroll-snap-type: none; }
+      .hero-art img { animation: none; }
       /* keep the resting offsets, drop every burst */
       .ghost, .ghost::before, .ro-n::before { animation: none; }
       .ghost::after, .ro-n::after { animation: none; opacity: 0; }
-      .btn, .nav nav a { transition: none; }
     }
   </style>
 </head>
@@ -710,7 +548,6 @@
         <span id="shark" class="sprite"></span>
 
         <div id="hud">
-          <span id="score"><span id="cur"></span><span id="hiscore"></span></span>
           <button id="mute" aria-label="Mute music">SOUND ON</button>
           <button id="info" aria-label="How to play">?</button>
         </div>
@@ -883,7 +720,6 @@
 
     const WATER = 90, DIVE_Y = -48;
     const game = document.getElementById('game'), sharkEl = document.getElementById('shark'),
-          curEl = document.getElementById('cur'), hiEl = document.getElementById('hiscore'),
           msgEl = document.getElementById('msg'),
           bgm = document.getElementById('bgm'), muteEl = document.getElementById('mute'),
           oof = document.getElementById('oof');
@@ -934,8 +770,6 @@
     function report() {
       const c = score | 0, h = hi | 0;
       if (c === lastCur && h === lastHi && state === lastState) return;
-      if (c !== lastCur) curEl.textContent = pad5(c);
-      if (h !== lastHi) hiEl.textContent = pad5(h);
       if (state !== lastState) {
         // While a run is live, a stray trackpad flick over the strip must not
         // page away and leave the shark to die unwatched.

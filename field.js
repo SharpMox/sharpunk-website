@@ -28,7 +28,7 @@
   const drifts = !art;
 
   const VIOLET = '155,123,255';   /* --violet */
-  const LIME   = '162,215,65';    /* the logo's green, as the glitch uses */
+  const LIME   = '162,213,65';    /* --lime, logo.svg's #a2d541 */
   const GAP    = 46;              /* lattice spacing: the whole density knob */
   const SWAY   = .38;             /* spiral: radians it winds and unwinds by */
   const ARMS   = 3;               /* spiral: arms coming off the mark */
