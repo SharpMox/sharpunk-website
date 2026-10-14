@@ -130,6 +130,19 @@
       .stack-item .shot { order: -1; border-left: 0; border-bottom: 1px solid var(--edge); aspect-ratio: 16 / 10; min-height: 0; }
     }
 
+    /* ---------------- a second, single-card stack: UI/UX work ----------------
+       Sticky only earns its keep when a later card needs to pin under an
+       earlier one. With one card there is nothing to stack, so it stays in
+       flow; margin-bottom stands in for the first stack's 380px release tail,
+       just sized for one card instead of a three-card deck. */
+    .stack-solo .stack-item { position: static; }
+    .stack-solo { margin-bottom: 72px; }
+    /* the first stack's 380px tail already clears the sticky release and
+       reads as section breathing room on its own; this head's usual
+       74px top padding (tuned for sitting right under the fixed nav) would
+       just stack on top of that and read as a dead gap. */
+    .page-head.tight { padding-top: 0; }
+
     @media (prefers-reduced-motion: reduce) {
       .spot::after, .stack-item .shot img { transition: none; }
     }
@@ -191,6 +204,25 @@
           <div class="shot"><img src="/shots/maison-duroc.webp" alt="Maison Duroc, an artisan bakery storefront" loading="lazy"></div>
         </article>
         <div class="stack-tail" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="shell page-head tight">
+      <h1>Interfaces we<br><em>shaped</em></h1>
+      <p>UI/UX work.</p>
+    </div>
+
+    <div class="shell">
+      <div class="stack stack-solo">
+        <article class="stack-item glass spot" style="--i:0">
+          <div class="txt">
+            <h2><span class="mark" aria-hidden="true">🔐</span>Hikyo</h2>
+            <span class="host">hikyo.app</span>
+            <p>We worked on the UI of Hikyo, an open-source secrets manager.</p>
+            <a class="go" href="https://hikyo.app/" target="_blank" rel="noopener">Visit <span class="arw">&rarr;</span></a>
+          </div>
+          <div class="shot"><img src="/shots/hikyo.webp" alt="Hikyo's configuration matrix" loading="lazy"></div>
+        </article>
       </div>
     </div>
 
