@@ -137,11 +137,9 @@
        just sized for one card instead of a three-card deck. */
     .stack-solo .stack-item { position: static; }
     .stack-solo { margin-bottom: 72px; }
-    /* the first stack's 380px tail already clears the sticky release and
-       reads as section breathing room on its own; this head's usual
-       74px top padding (tuned for sitting right under the fixed nav) would
-       just stack on top of that and read as a dead gap. */
-    .page-head.tight { padding-top: 0; }
+    /* the first stack's 380px tail is used up by the sticky release, so the
+       last card ends flush with whatever follows: the gap has to come from here */
+    .page-head.section-head { padding-top: clamp(120px, 16vw, 220px); }
 
     @media (prefers-reduced-motion: reduce) {
       .spot::after, .stack-item .shot img { transition: none; }
@@ -207,7 +205,7 @@
       </div>
     </div>
 
-    <div class="shell page-head tight">
+    <div class="shell page-head section-head">
       <h1>Interfaces we<br><em>shaped</em></h1>
       <p>UI/UX work.</p>
     </div>
