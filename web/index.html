@@ -130,6 +130,17 @@
       .stack-item .shot { order: -1; border-left: 0; border-bottom: 1px solid var(--edge); aspect-ratio: 16 / 10; min-height: 0; }
     }
 
+    /* ---------------- a second, single-card stack: UI/UX work ----------------
+       Sticky only earns its keep when a later card needs to pin under an
+       earlier one. With one card there is nothing to stack, so it stays in
+       flow; margin-bottom stands in for the first stack's 380px release tail,
+       just sized for one card instead of a three-card deck. */
+    .stack-solo .stack-item { position: static; }
+    .stack-solo { margin-bottom: 72px; }
+    /* the first stack's 380px tail is used up by the sticky release, so the
+       last card ends flush with whatever follows: the gap has to come from here */
+    .page-head.section-head { padding-top: clamp(120px, 16vw, 220px); }
+
     @media (prefers-reduced-motion: reduce) {
       .spot::after, .stack-item .shot img { transition: none; }
     }
@@ -153,12 +164,23 @@
   <main>
     <div class="shell page-head">
       <h1>Websites we<br><em>delivered</em></h1>
-      <p>Three live sites. All static pages.</p>
+      <p>From concept to delivery.</p>
     </div>
 
     <div class="shell">
       <div class="stack">
         <article class="stack-item glass spot" style="--i:0">
+          <span class="wip">Under construction</span>
+          <div class="txt">
+            <h2><span class="mark" aria-hidden="true">🥐</span>Maison Duroc</h2>
+            <span class="host">maison-duroc.fr</span>
+            <p>Storefront for an artisan bakery and patisserie in Asnieres-sur-Seine, with the full product range, opening hours and contact details.</p>
+            <a class="go" href="https://maison-duroc.fr/" target="_blank" rel="noopener">Visit <span class="arw">&rarr;</span></a>
+          </div>
+          <div class="shot"><img src="/shots/maison-duroc.webp" alt="Maison Duroc, an artisan bakery storefront" loading="lazy"></div>
+        </article>
+
+        <article class="stack-item glass spot" style="--i:1">
           <span class="wip">Under construction</span>
           <div class="txt">
             <h2><span class="mark chess" aria-hidden="true">♟️</span>NO KINGS Codex</h2>
@@ -169,7 +191,7 @@
           <div class="shot"><img src="/shots/no-kings.webp" alt="The NO-KINGS Codex, a filterable piece reference" loading="lazy"></div>
         </article>
 
-        <article class="stack-item glass spot" style="--i:1">
+        <article class="stack-item glass spot" style="--i:2">
           <span class="wip">Under construction</span>
           <div class="txt">
             <h2><span class="mark" aria-hidden="true">🥧</span>Color Pie</h2>
@@ -179,18 +201,26 @@
           </div>
           <div class="shot"><img src="/shots/color-pie.webp" alt="Color Pie, a Magic colour philosophy breakdown" loading="lazy"></div>
         </article>
-
-        <article class="stack-item glass spot" style="--i:2">
-          <span class="wip">Under construction</span>
-          <div class="txt">
-            <h2><span class="mark" aria-hidden="true">🥐</span>Maison Duroc</h2>
-            <span class="host">maison-duroc.fr</span>
-            <p>Storefront for an artisan bakery and patisserie in Asnieres-sur-Seine, with the full product range, opening hours and contact details.</p>
-            <a class="go" href="https://maison-duroc.fr/" target="_blank" rel="noopener">Visit <span class="arw">&rarr;</span></a>
-          </div>
-          <div class="shot"><img src="/shots/maison-duroc.webp" alt="Maison Duroc, an artisan bakery storefront" loading="lazy"></div>
-        </article>
         <div class="stack-tail" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="shell page-head section-head">
+      <h1>Interfaces we<br><em>shaped</em></h1>
+      <p>UI/UX Missions</p>
+    </div>
+
+    <div class="shell">
+      <div class="stack stack-solo">
+        <article class="stack-item glass spot" style="--i:0">
+          <div class="txt">
+            <h2><span class="mark" aria-hidden="true">🔐</span>Hikyo</h2>
+            <span class="host">hikyo.app</span>
+            <p>We worked on the UI of Hikyo, an open-source secrets manager.</p>
+            <a class="go" href="https://hikyo.app/" target="_blank" rel="noopener">Visit <span class="arw">&rarr;</span></a>
+          </div>
+          <div class="shot"><img src="/shots/hikyo.webp" alt="Hikyo's configuration matrix" loading="lazy"></div>
+        </article>
       </div>
     </div>
 
